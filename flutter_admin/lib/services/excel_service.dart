@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart';
+import 'package:universal_html/html.dart' as html;
 import '../models/seenjeem_question_model.dart';
 import '../models/main_category_model.dart';
 import '../models/sub_category_model.dart';
@@ -41,6 +42,39 @@ class ExcelService {
     }
   }
 
+  // Helper method to trigger download
+  void _saveAndDownload(Excel excel, String fileName) {
+    // Encode the Excel file to bytes
+    final List<int>? fileBytes = excel.save();
+
+    if (fileBytes != null) {
+      // Create a Blob from the bytes
+      final blob = html.Blob([fileBytes]);
+
+      // Create an object URL for the Blob
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Create a temporary anchor element
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..style.display = 'none'; // Hide the element
+
+      // Add to the DOM
+      html.document.body?.children.add(anchor);
+
+      // Trigger the click
+      anchor.click();
+
+      // Cleanup
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
+
+      print('Downloaded $fileName');
+    } else {
+      print('Error: Failed to encode Excel file.');
+    }
+  }
+
   void downloadTemplate(String type) {
     var excel = Excel.createExcel();
     Sheet sheet = excel['Template'];
@@ -71,12 +105,10 @@ class ExcelService {
 
     sheet.appendRow(headers.map((e) => TextCellValue(e)).toList());
 
-    // In a real web app, we would trigger a download here.
-    // Since we don't have 'universal_html' or 'dart:html' setup guaranteed or context,
-    // we'll just print for now as placeholder for the "run" requirement.
-    // To implement download:
-    // excel.save(fileName: '$type\_template.xlsx'); // works in some setups or returns bytes
-    print('Generated template for $type. Implement download logic.');
+    // Explicitly set the default sheet if needed, or remove the default 'Sheet1' if desired
+    // excel.delete('Sheet1');
+
+    _saveAndDownload(excel, '${type}_template.xlsx');
   }
 
   Future<void> exportQuestions(List<SeenjeemQuestionModel> questions) async {
@@ -101,8 +133,7 @@ class ExcelService {
       ]);
     }
 
-    // excel.save(fileName: 'questions_export.xlsx');
-    print('Exported questions. Implement download logic.');
+    _saveAndDownload(excel, 'questions_export.xlsx');
   }
 
   Future<void> exportMainCategories(List<MainCategoryModel> categories) async {
@@ -124,7 +155,8 @@ class ExcelService {
         TextCellValue(c.isActive ? 'Active' : 'Disabled'),
       ]);
     }
-    print('Exported main categories.');
+
+    _saveAndDownload(excel, 'main_categories_export.xlsx');
   }
 
   Future<void> exportSubCategories(List<SubCategoryModel> categories) async {
@@ -148,6 +180,7 @@ class ExcelService {
         TextCellValue(c.isActive ? 'Active' : 'Disabled'),
       ]);
     }
-    print('Exported sub categories.');
+
+    _saveAndDownload(excel, 'sub_categories_export.xlsx');
   }
 }
