@@ -10,9 +10,10 @@ class AppTheme {
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
+        tertiary: AppColors.accent,
         surface: AppColors.surface,
         error: AppColors.danger,
-        background: AppColors.background,
+        // background: AppColors.background, // Deprecated, using surface
       ),
       textTheme: GoogleFonts.interTextTheme().apply(
         bodyColor: AppColors.textPrimary,

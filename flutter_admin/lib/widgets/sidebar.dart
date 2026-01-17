@@ -1,3 +1,4 @@
+import 'package:allmah_admin/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class Sidebar extends StatelessWidget {
@@ -14,7 +15,7 @@ class Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      color: const Color(0xFF1F2937),
+      color: AppColors.danger,
       child: Column(
         children: [
           Container(
@@ -22,13 +23,13 @@ class Sidebar extends StatelessWidget {
             child: const Text(
               'Allmah Admin',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const Divider(color: Color(0xFF374151)),
+          const Divider(color: AppColors.textSecondary),
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -51,11 +52,12 @@ class Sidebar extends StatelessWidget {
   Widget _buildMenuItem(IconData icon, String title, String page) {
     final isActive = currentPage == page;
     return ListTile(
-      leading: Icon(icon, color: isActive ? Colors.blue : Colors.white70),
+      leading: Icon(icon,
+          color: isActive ? AppColors.primaryLight : AppColors.secondary),
       title: Text(
         title,
         style: TextStyle(
-          color: isActive ? Colors.blue : Colors.white70,
+          color: isActive ? AppColors.primaryLight : AppColors.secondary,
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         ),
       ),
