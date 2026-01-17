@@ -764,7 +764,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                                                             decoration: BoxDecoration(
                                                                 color: category.isActive
                                                                     ? AppColors
-                                                                        .secondaryLight
+                                                                        .success
                                                                     : AppColors
                                                                         .dangerLight,
                                                                 borderRadius:
@@ -777,7 +777,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                                                                 style: TextStyle(
                                                                     color: category.isActive
                                                                         ? AppColors
-                                                                            .secondaryDark
+                                                                            .offWhite
                                                                         : AppColors
                                                                             .dangerDark,
                                                                     fontWeight:
@@ -860,7 +860,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                                                             decoration: BoxDecoration(
                                                                 color: category.isActive
                                                                     ? AppColors
-                                                                        .secondaryLight
+                                                                        .success
                                                                     : AppColors
                                                                         .dangerLight,
                                                                 borderRadius:
@@ -873,7 +873,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                                                                 style: TextStyle(
                                                                     color: category.isActive
                                                                         ? AppColors
-                                                                            .secondaryDark
+                                                                            .offWhite
                                                                         : AppColors
                                                                             .dangerDark,
                                                                     fontWeight:
