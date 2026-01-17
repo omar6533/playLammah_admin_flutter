@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/games_page.dart","name":"GamesPage","isNullable":false,"isRecordType":false},"className":"GamesPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/games_page.dart","inputHash":0}

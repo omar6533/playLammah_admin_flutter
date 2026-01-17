@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/payments_page.dart","name":"PaymentsPage","isNullable":false,"isRecordType":false},"className":"PaymentsPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/payments_page.dart","inputHash":0}

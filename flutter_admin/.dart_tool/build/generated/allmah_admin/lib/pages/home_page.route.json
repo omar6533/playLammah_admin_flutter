@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/home_page.dart","name":"HomePage","isNullable":false,"isRecordType":false},"className":"HomePage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/home_page.dart","inputHash":0}

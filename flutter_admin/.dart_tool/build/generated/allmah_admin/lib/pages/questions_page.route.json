@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/questions_page.dart","name":"QuestionsPage","isNullable":false,"isRecordType":false},"className":"QuestionsPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/questions_page.dart","inputHash":0}

@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/settings_page.dart","name":"SettingsPage","isNullable":false,"isRecordType":false},"className":"SettingsPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/settings_page.dart","inputHash":0}

@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/categories_page.dart","name":"CategoriesPage","isNullable":false,"isRecordType":false},"className":"CategoriesPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/categories_page.dart","inputHash":0}

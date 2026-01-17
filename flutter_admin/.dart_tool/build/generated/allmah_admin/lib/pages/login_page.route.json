@@ -1,0 +1,1 @@
+{"routes":[{"name":null,"pathParams":[],"pageType":{"import":"package:allmah_admin/pages/login_page.dart","name":"LoginPage","isNullable":false,"isRecordType":false},"className":"LoginPage","parameters":[],"hasWrappedRoute":false,"hasConstConstructor":true,"deferredLoading":null}],"inputPath":"lib/pages/login_page.dart","inputHash":0}
