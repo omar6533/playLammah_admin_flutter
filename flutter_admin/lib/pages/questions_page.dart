@@ -97,7 +97,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
                       contentPadding:
                           EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                     ),
-                    items: subCats.map((cat) {
+                    items: subCats
+                        .fold<Map<String, SubCategoryModel>>(
+                          {},
+                          (map, cat) => map..putIfAbsent(cat.id, () => cat),
+                        )
+                        .values
+                        .map((cat) {
                       return DropdownMenuItem(
                         value: cat.id,
                         child: Text(
@@ -806,7 +812,10 @@ class _QuestionsPageState extends State<QuestionsPage> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String?>(
-                value: _filterMainCategoryId,
+                value: (mainCategories.any((cat) =>
+                        cat.id == _filterMainCategoryId && cat.isActive))
+                    ? _filterMainCategoryId
+                    : null,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   contentPadding:
@@ -818,7 +827,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
                     value: null,
                     child: Text('All Main Categories'),
                   ),
-                  ...mainCategories.map((cat) {
+                  ...mainCategories
+                      .where((cat) => cat.isActive)
+                      .fold<Map<String, MainCategoryModel>>(
+                        {},
+                        (map, cat) => map..putIfAbsent(cat.id, () => cat),
+                      )
+                      .values
+                      .map((cat) {
                     return DropdownMenuItem<String?>(
                       value: cat.id,
                       child: Text(cat.nameAr),
@@ -837,7 +853,10 @@ class _QuestionsPageState extends State<QuestionsPage> {
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String?>(
-                value: _filterSubCategoryId,
+                value: (filteredSubCategories.any((cat) =>
+                        cat.id == _filterSubCategoryId && cat.isActive))
+                    ? _filterSubCategoryId
+                    : null,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   contentPadding:
@@ -849,7 +868,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
                     value: null,
                     child: Text('All Sub Categories'),
                   ),
-                  ...filteredSubCategories.map((cat) {
+                  ...filteredSubCategories
+                      .where((cat) => cat.isActive)
+                      .fold<Map<String, SubCategoryModel>>(
+                        {},
+                        (map, cat) => map..putIfAbsent(cat.id, () => cat),
+                      )
+                      .values
+                      .map((cat) {
                     return DropdownMenuItem<String?>(
                       value: cat.id,
                       child: Text(cat.nameAr),
@@ -887,9 +913,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
       return true;
     }).toList();
 
-    return SizedBox(
-      width: double.infinity,
-      child: DataTable(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scrollbar(
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: constraints.maxWidth,
+              ),
+              child: DataTable(
         headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
         columns: const [
           DataColumn(
@@ -911,84 +945,97 @@ class _QuestionsPageState extends State<QuestionsPage> {
               label: Text('Actions',
                   style: TextStyle(fontWeight: FontWeight.w600))),
         ],
-        rows: filteredQuestions.map((question) {
-          final subCatName = subCats
-                  .where((s) => s.id == question.subCategoryId)
-                  .firstOrNull
-                  ?.nameAr ??
-              'N/A';
+        rows: filteredQuestions.isEmpty
+            ? [
+                const DataRow(cells: [
+                  DataCell(SizedBox()),
+                  DataCell(SizedBox()),
+                  DataCell(Text('No questions found')),
+                  DataCell(SizedBox()),
+                  DataCell(SizedBox()),
+                  DataCell(SizedBox()),
+                ])
+              ]
+            : filteredQuestions.map((question) {
+                final subCatName = subCats
+                        .where((s) => s.id == question.subCategoryId)
+                        .firstOrNull
+                        ?.nameAr ??
+                    'N/A';
 
-          return DataRow(cells: [
-            DataCell(Text(subCatName,
-                style: const TextStyle(fontWeight: FontWeight.w500))),
-            DataCell(Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Text(
-                '${question.points}',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.blue[700]),
-              ),
-            )),
-            DataCell(SizedBox(
-              width: 200,
-              child: Text(question.questionTextAr,
-                  overflow: TextOverflow.ellipsis),
-            )),
-            DataCell(SizedBox(
-              width: 200,
-              child:
-                  Text(question.answerTextAr, overflow: TextOverflow.ellipsis),
-            )),
-            DataCell(Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: question.status == 'active'
-                    ? AppColors.secondaryLight
-                    : AppColors.dangerLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                question.status.toUpperCase(),
-                style: TextStyle(
-                  color: question.status == 'active'
-                      ? AppColors.secondaryDark
-                      : AppColors.dangerDark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            )),
-            DataCell(Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.visibility, size: 18),
-                  color: Colors.blue,
-                  onPressed: () => _showViewDialog(question, subCats),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 18),
-                  color: AppColors.primary,
-                  onPressed: () =>
-                      _showQuestionDialog(context, mainCats, subCats, question),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.power_settings_new, size: 18),
-                  color: question.status == 'active'
-                      ? AppColors.danger
-                      : AppColors.secondary,
-                  onPressed: () => context.read<QuestionsBloc>().add(
-                      ToggleQuestionStatus(
-                          question.id, question.status != 'active')),
-                ),
-              ],
-            )),
-          ]);
-        }).toList(),
+                return DataRow(cells: [
+                  DataCell(Text(subCatName,
+                      style: const TextStyle(fontWeight: FontWeight.w500))),
+                  DataCell(Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Text(
+                      '${question.points}',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.blue[700]),
+                    ),
+                  )),
+                  DataCell(SizedBox(
+                    width: 200,
+                    child: Text(question.questionTextAr,
+                        overflow: TextOverflow.ellipsis),
+                  )),
+                  DataCell(SizedBox(
+                    width: 200,
+                    child: Text(question.answerTextAr,
+                        overflow: TextOverflow.ellipsis),
+                  )),
+                  DataCell(Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: question.status == 'active'
+                          ? AppColors.secondaryLight
+                          : AppColors.dangerLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      question.status.toUpperCase(),
+                      style: TextStyle(
+                        color: question.status == 'active'
+                            ? AppColors.secondaryDark
+                            : AppColors.dangerDark,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )),
+                  DataCell(Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.visibility, size: 18),
+                        color: Colors.blue,
+                        onPressed: () => _showViewDialog(question, subCats),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 18),
+                        color: AppColors.primary,
+                        onPressed: () => _showQuestionDialog(
+                            context, mainCats, subCats, question),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.power_settings_new, size: 18),
+                        color: question.status == 'active'
+                            ? AppColors.danger
+                            : AppColors.secondary,
+                        onPressed: () => context.read<QuestionsBloc>().add(
+                            ToggleQuestionStatus(
+                                question.id, question.status != 'active')),
+                      ),
+                    ],
+                  )),
+                ]);
+              }).toList(),
       ),
     );
   }

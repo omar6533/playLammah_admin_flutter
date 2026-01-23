@@ -1,0 +1,27 @@
+2026/01/19-21:23:06.446 1dfde79 Creating DB /private/var/folders/9t/g1kvfkyn3vg1vrqlv4xx4lj80000gn/T/flutter_tools.fteocZ/flutter_tools_chrome_device.Ao0KUw/Default/IndexedDB/http_localhost_57659.indexeddb.leveldb since it was missing.
+2026/01/19-21:23:06.448 1dfde79 Reusing MANIFEST /private/var/folders/9t/g1kvfkyn3vg1vrqlv4xx4lj80000gn/T/flutter_tools.fteocZ/flutter_tools_chrome_device.Ao0KUw/Default/IndexedDB/http_localhost_57659.indexeddb.leveldb/MANIFEST-000001
+2026/01/19-21:23:06.452 1dfde84 Level-0 table #5: started
+2026/01/19-21:23:06.454 1dfde84 Level-0 table #5: 1311 bytes OK
+2026/01/19-21:23:06.455 1dfde84 Delete type=0 #3
+2026/01/19-21:23:06.455 1dfde7b Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/01/19-21:31:12.612 1dfde7b Level-0 table #7: started
+2026/01/19-21:31:12.620 1dfde7b Level-0 table #7: 4649 bytes OK
+2026/01/19-21:31:12.621 1dfde7b Delete type=0 #4
+2026/01/19-21:31:12.621 1dfde79 Manual compaction at level-0 from '\x00\x04\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x05\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/01/19-21:31:43.190 1dfde7b Level-0 table #9: started
+2026/01/19-21:31:43.203 1dfde7b Level-0 table #9: 3368 bytes OK
+2026/01/19-21:31:43.204 1dfde7b Delete type=0 #6
+2026/01/19-21:31:43.204 1dfde7b Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at '\x00\x05\x00\x00\x05' @ 201 : 1
+2026/01/19-21:31:43.204 1dfde7b Compacting 1@0 + 1@1 files
+2026/01/19-21:31:43.204 1dfde7b Generated table #10@0: 70 keys, 3347 bytes
+2026/01/19-21:31:43.204 1dfde7b Compacted 1@0 + 1@1 files => 3347 bytes
+2026/01/19-21:31:43.205 1dfde7b compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/01/19-21:31:43.205 1dfde7b Delete type=2 #9
+2026/01/19-21:31:43.205 1dfde79 Manual compaction at level-0 from '\x00\x05\x00\x00\x05' @ 201 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/01/19-21:33:02.405 1dfde7b Compacting 1@1 + 1@2 files
+2026/01/19-21:33:02.406 1dfde7b Generated table #11@1: 40 keys, 3009 bytes
+2026/01/19-21:33:02.406 1dfde7b Compacted 1@1 + 1@2 files => 3009 bytes
+2026/01/19-21:33:02.408 1dfde7b compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/01/19-21:33:02.408 1dfde7b Delete type=2 #7
+2026/01/19-21:33:02.408 1dfde7b Delete type=2 #10
+2026/01/19-21:33:02.408 1dfde7b Delete type=2 #5

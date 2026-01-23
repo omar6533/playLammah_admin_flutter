@@ -148,15 +148,22 @@ class FirestoreService {
   // Sub Categories
   Future<List<SubCategoryModel>> getSubCategories(
       [String? mainCategoryId]) async {
+    // Ordering by display_order is efficient.
+    // If we add a where clause on another field, Firestore requires a composite index.
+    // To avoid blocking the user with index creation, we filter in-memory for now.
     Query query = _db.collection('sub_categories').orderBy('display_order');
-    if (mainCategoryId != null) {
-      query = query.where('main_category_id', isEqualTo: mainCategoryId);
-    }
+
     final snapshot = await query.get();
-    return snapshot.docs
+    var cats = snapshot.docs
         .map((doc) => SubCategoryModel.fromFirestore(
             doc.data() as Map<String, dynamic>, doc.id))
         .toList();
+
+    if (mainCategoryId != null) {
+      cats = cats.where((cat) => cat.mainCategoryId == mainCategoryId).toList();
+    }
+
+    return cats;
   }
 
   Future<void> createSubCategory(Map<String, dynamic> data) async {

@@ -120,18 +120,30 @@ class _CategoriesPageState extends State<CategoriesPage>
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedMainCatId,
+                      value: mainCategories
+                              .any((cat) => cat.id == selectedMainCatId)
+                          ? selectedMainCatId
+                          : (mainCategories.isNotEmpty
+                              ? mainCategories.first.id
+                              : null),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         contentPadding:
                             EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                       ),
-                      items: mainCategories.map((cat) {
-                        return DropdownMenuItem(
-                          value: cat.id,
-                          child: Text(cat.nameAr),
-                        );
-                      }).toList(),
+                      items: mainCategories
+                          .fold<Map<String, MainCategoryModel>>(
+                            {},
+                            (map, cat) => map..putIfAbsent(cat.id, () => cat),
+                          )
+                          .values
+                          .map((cat) {
+                            return DropdownMenuItem(
+                              value: cat.id,
+                              child: Text(cat.nameAr),
+                            );
+                          })
+                          .toList(),
                       onChanged: (value) {
                         setDialogState(() => selectedMainCatId = value);
                       },
@@ -643,7 +655,13 @@ class _CategoriesPageState extends State<CategoriesPage>
                                   ),
                                   const SizedBox(height: 8),
                                   DropdownButtonFormField<String?>(
-                                    initialValue: _selectedMainCategoryId,
+                                    value: (_selectedMainCategoryId != null &&
+                                            mainCats.any((cat) =>
+                                                cat.id ==
+                                                    _selectedMainCategoryId &&
+                                                cat.isActive))
+                                        ? _selectedMainCategoryId
+                                        : null,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
                                       contentPadding: EdgeInsets.symmetric(
@@ -654,12 +672,20 @@ class _CategoriesPageState extends State<CategoriesPage>
                                         value: null,
                                         child: Text('All Main Categories'),
                                       ),
-                                      ...mainCats.map((cat) {
-                                        return DropdownMenuItem<String?>(
-                                          value: cat.id,
-                                          child: Text(cat.nameAr),
-                                        );
-                                      }),
+                                      ...mainCats
+                                          .where((cat) => cat.isActive)
+                                          .fold<Map<String, MainCategoryModel>>(
+                                            {},
+                                            (map, cat) => map
+                                              ..putIfAbsent(cat.id, () => cat),
+                                          )
+                                          .values
+                                          .map((cat) {
+                                            return DropdownMenuItem<String?>(
+                                              value: cat.id,
+                                              child: Text(cat.nameAr),
+                                            );
+                                          }),
                                     ],
                                     onChanged: (value) {
                                       setState(() =>
@@ -675,248 +701,267 @@ class _CategoriesPageState extends State<CategoriesPage>
                           ],
                           // Data Table
                           Expanded(
-                              child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Scrollbar(
+                                  thumbVisibility: true,
                                   child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minWidth: constraints.maxWidth,
+                                      ),
                                       child: DataTable(
-                                          headingRowColor:
-                                              WidgetStateProperty.all(
-                                                  Colors.grey[50]),
-                                          columns: [
+                                        headingRowColor:
+                                            WidgetStateProperty.all(
+                                                Colors.grey[50]),
+                                        columnSpacing: 24,
+                                        horizontalMargin: 16,
+                                        columns: [
+                                          const DataColumn(
+                                              label: Text('Order',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const DataColumn(
+                                              label: Text('Name (Arabic)',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          if (!isMainTab)
                                             const DataColumn(
-                                                label: Text('Order',
+                                                label: Text('Main Category',
                                                     style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.w600))),
-                                            const DataColumn(
-                                                label: Text('Name (Arabic)',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600))),
-                                            if (!isMainTab)
-                                              const DataColumn(
-                                                  label: Text('Main Category',
-                                                      style: TextStyle(
-                                                          fontWeight: FontWeight
-                                                              .w600))),
-                                            const DataColumn(
-                                                label: Text('Media',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600))),
-                                            const DataColumn(
-                                                label: Text('Status',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600))),
-                                            const DataColumn(
-                                                label: Text('Created At',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600))),
-                                            const DataColumn(
-                                                label: Text('Actions',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600))),
-                                          ],
-                                          rows: isMainTab
-                                              ? mainCats
-                                                  .map((category) =>
-                                                      DataRow(cells: [
-                                                        DataCell(Text(category
-                                                            .displayOrder
-                                                            .toString())),
-                                                        DataCell(Text(
-                                                            category.nameAr,
-                                                            style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500))),
-                                                        DataCell(category.mediaUrl != null
-                                                            ? ClipRRect(
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                        4),
-                                                                child: Image.network(category.mediaUrl!,
-                                                                    width: 48,
-                                                                    height: 48,
-                                                                    fit: BoxFit
-                                                                        .cover))
-                                                            : Container(
-                                                                width: 48,
-                                                                height: 48,
-                                                                decoration: BoxDecoration(
-                                                                    color:
-                                                                        Colors.grey[
-                                                                            200],
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                            4)),
-                                                                child: Icon(
-                                                                    Icons.image,
-                                                                    color: Colors
-                                                                        .grey[400]))),
-                                                        DataCell(Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                                horizontal: 12,
-                                                                vertical: 6),
-                                                            decoration: BoxDecoration(
-                                                                color: category.isActive
-                                                                    ? AppColors
-                                                                        .success
-                                                                    : AppColors
-                                                                        .dangerLight,
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                        12)),
-                                                            child: Text(
-                                                                category.isActive
-                                                                    ? 'Active'
-                                                                    : 'Disabled',
-                                                                style: TextStyle(
-                                                                    color: category.isActive
-                                                                        ? AppColors
-                                                                            .offWhite
-                                                                        : AppColors
-                                                                            .dangerDark,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    fontSize: 12)))),
-                                                        DataCell(Text(
-                                                            _formatDate(category
-                                                                .createdAt))),
-                                                        DataCell(Row(children: [
-                                                          IconButton(
-                                                              icon: const Icon(
-                                                                  Icons.edit,
-                                                                  size: 18),
-                                                              color: AppColors
-                                                                  .primary,
-                                                              onPressed: () =>
-                                                                  _showCategoryDialog(
-                                                                      context,
-                                                                      mainCats,
-                                                                      category)),
-                                                          IconButton(
-                                                              icon: const Icon(
-                                                                  Icons
-                                                                      .power_settings_new,
-                                                                  size: 18),
-                                                              color: category
-                                                                      .isActive
-                                                                  ? AppColors
-                                                                      .danger
-                                                                  : AppColors
-                                                                      .secondary,
-                                                              onPressed: () => context
-                                                                  .read<
-                                                                      CategoriesBloc>()
-                                                                  .add(ToggleMainCategoryStatus(
+                                          const DataColumn(
+                                              label: Text('Media',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const DataColumn(
+                                              label: Text('Status',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const DataColumn(
+                                              label: Text('Created At',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const DataColumn(
+                                              label: Text('Actions',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                        ],
+                                        rows: isMainTab
+                                            ? (mainCats.isEmpty
+                                                ? [
+                                                    const DataRow(cells: [
+                                                      DataCell(SizedBox()),
+                                                      DataCell(Text(
+                                                          'No main categories found')),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                    ])
+                                                  ]
+                                                : mainCats
+                                                    .map(
+                                                        (category) => DataRow(
+                                                                cells: [
+                                                                  DataCell(Text(category
+                                                                      .displayOrder
+                                                                      .toString())),
+                                                                  DataCell(Text(
                                                                       category
-                                                                          .id,
-                                                                      !category
-                                                                          .isActive))),
-                                                        ])),
-                                                      ]))
-                                                  .toList()
-                                              : subCats
-                                                  .map((category) =>
-                                                      DataRow(cells: [
-                                                        DataCell(Text(category
-                                                            .displayOrder
-                                                            .toString())),
-                                                        DataCell(Text(
-                                                            category.nameAr,
-                                                            style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500))),
-                                                        DataCell(Text(mainCats
-                                                                .where((m) =>
-                                                                    m.id ==
-                                                                    category
-                                                                        .mainCategoryId)
-                                                                .firstOrNull
-                                                                ?.nameAr ??
-                                                            'N/A')),
-                                                        DataCell(ClipRRect(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        4),
-                                                            child: Image.network(
-                                                                category
-                                                                    .mediaUrl,
-                                                                width: 48,
-                                                                height: 48,
-                                                                fit: BoxFit
-                                                                    .cover))),
-                                                        DataCell(Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                                horizontal: 12,
-                                                                vertical: 6),
-                                                            decoration: BoxDecoration(
-                                                                color: category.isActive
-                                                                    ? AppColors
-                                                                        .success
-                                                                    : AppColors
-                                                                        .dangerLight,
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                        12)),
-                                                            child: Text(
-                                                                category.isActive
-                                                                    ? 'Active'
-                                                                    : 'Disabled',
-                                                                style: TextStyle(
-                                                                    color: category.isActive
-                                                                        ? AppColors
-                                                                            .offWhite
-                                                                        : AppColors
-                                                                            .dangerDark,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    fontSize: 12)))),
-                                                        DataCell(Text(
-                                                            _formatDate(category
-                                                                .createdAt))),
-                                                        DataCell(Row(children: [
-                                                          IconButton(
-                                                              icon: const Icon(
-                                                                  Icons.edit,
-                                                                  size: 18),
-                                                              color: AppColors
-                                                                  .primary,
-                                                              onPressed: () =>
-                                                                  _showCategoryDialog(
-                                                                      context,
-                                                                      mainCats,
-                                                                      category)),
-                                                          IconButton(
-                                                              icon: const Icon(
-                                                                  Icons
-                                                                      .power_settings_new,
-                                                                  size: 18),
-                                                              color: category
-                                                                      .isActive
-                                                                  ? AppColors
-                                                                      .danger
-                                                                  : AppColors
-                                                                      .secondary,
-                                                              onPressed: () => context
-                                                                  .read<
-                                                                      CategoriesBloc>()
-                                                                  .add(ToggleSubCategoryStatus(
+                                                                          .nameAr,
+                                                                      style: const TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.w500))),
+                                                                  DataCell(category
+                                                                              .mediaUrl !=
+                                                                          null
+                                                                      ? ClipRRect(
+                                                                          borderRadius: BorderRadius.circular(
+                                                                              4),
+                                                                          child: Image.network(category.mediaUrl!,
+                                                                              width:
+                                                                                  48,
+                                                                              height:
+                                                                                  48,
+                                                                              fit: BoxFit
+                                                                                  .cover))
+                                                                      : Container(
+                                                                          width:
+                                                                              48,
+                                                                          height:
+                                                                              48,
+                                                                          decoration: BoxDecoration(
+                                                                              color: Colors.grey[200],
+                                                                              borderRadius: BorderRadius.circular(4)),
+                                                                          child: Icon(Icons.image, color: Colors.grey[400]))),
+                                                                  DataCell(Container(
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          horizontal:
+                                                                              12,
+                                                                          vertical:
+                                                                              6),
+                                                                      decoration: BoxDecoration(
+                                                                          color: category.isActive
+                                                                              ? AppColors
+                                                                                  .success
+                                                                              : AppColors
+                                                                                  .dangerLight,
+                                                                          borderRadius: BorderRadius.circular(
+                                                                              12)),
+                                                                      child: Text(
+                                                                          category.isActive
+                                                                              ? 'Active'
+                                                                              : 'Disabled',
+                                                                          style: TextStyle(
+                                                                              color: category.isActive ? AppColors.offWhite : AppColors.dangerDark,
+                                                                              fontWeight: FontWeight.w600,
+                                                                              fontSize: 12)))),
+                                                                  DataCell(Text(
+                                                                      _formatDate(
+                                                                          category
+                                                                              .createdAt))),
+                                                                  DataCell(Row(
+                                                                      children: [
+                                                                        IconButton(
+                                                                            icon:
+                                                                                const Icon(Icons.edit, size: 18),
+                                                                            color: AppColors.primary,
+                                                                            onPressed: () => _showCategoryDialog(context, mainCats, category)),
+                                                                        IconButton(
+                                                                            icon:
+                                                                                const Icon(Icons.power_settings_new, size: 18),
+                                                                            color: category.isActive ? AppColors.danger : AppColors.secondary,
+                                                                            onPressed: () => context.read<CategoriesBloc>().add(ToggleMainCategoryStatus(category.id, !category.isActive))),
+                                                                      ])),
+                                                                ]))
+                                                    .toList())
+                                            : (subCats.isEmpty
+                                                ? [
+                                                    const DataRow(cells: [
+                                                      DataCell(SizedBox()),
+                                                      DataCell(Text(
+                                                          'No sub categories found')),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                      DataCell(SizedBox()),
+                                                    ])
+                                                  ]
+                                                : subCats
+                                                    .map((category) =>
+                                                        DataRow(cells: [
+                                                          DataCell(Text(category
+                                                              .displayOrder
+                                                              .toString())),
+                                                          DataCell(Text(
+                                                              category.nameAr,
+                                                              style: const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500))),
+                                                          DataCell(Text(mainCats
+                                                                  .where((m) =>
+                                                                      m.id ==
                                                                       category
-                                                                          .id,
-                                                                      !category
-                                                                          .isActive))),
-                                                        ])),
-                                                      ]))
-                                                  .toList())))),
+                                                                          .mainCategoryId)
+                                                                  .firstOrNull
+                                                                  ?.nameAr ??
+                                                              'N/A')),
+                                                          DataCell(ClipRRect(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          4),
+                                                              child: Image.network(
+                                                                  category
+                                                                      .mediaUrl,
+                                                                  width: 48,
+                                                                  height: 48,
+                                                                  fit: BoxFit
+                                                                      .cover))),
+                                                          DataCell(Container(
+                                                              padding: const EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      12,
+                                                                  vertical: 6),
+                                                              decoration: BoxDecoration(
+                                                                  color: category.isActive
+                                                                      ? AppColors
+                                                                          .success
+                                                                      : AppColors
+                                                                          .dangerLight,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                          12)),
+                                                              child: Text(
+                                                                  category.isActive
+                                                                      ? 'Active'
+                                                                      : 'Disabled',
+                                                                  style: TextStyle(
+                                                                      color: category.isActive
+                                                                          ? AppColors
+                                                                              .offWhite
+                                                                          : AppColors
+                                                                              .dangerDark,
+                                                                      fontWeight:
+                                                                          FontWeight.w600,
+                                                                      fontSize: 12)))),
+                                                          DataCell(Text(
+                                                              _formatDate(category
+                                                                  .createdAt))),
+                                                          DataCell(
+                                                              Row(children: [
+                                                            IconButton(
+                                                                icon: const Icon(
+                                                                    Icons.edit,
+                                                                    size: 18),
+                                                                color: AppColors
+                                                                    .primary,
+                                                                onPressed: () =>
+                                                                    _showCategoryDialog(
+                                                                        context,
+                                                                        mainCats,
+                                                                        category)),
+                                                            IconButton(
+                                                                icon: const Icon(
+                                                                    Icons
+                                                                        .power_settings_new,
+                                                                    size: 18),
+                                                                color: category
+                                                                        .isActive
+                                                                    ? AppColors
+                                                                        .danger
+                                                                    : AppColors
+                                                                        .secondary,
+                                                                onPressed: () => context
+                                                                    .read<
+                                                                        CategoriesBloc>()
+                                                                    .add(ToggleSubCategoryStatus(
+                                                                        category
+                                                                            .id,
+                                                                        !category
+                                                                            .isActive))),
+                                                          ])),
+                                                        ]))
+                                                    .toList()),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
