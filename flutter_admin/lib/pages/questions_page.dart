@@ -981,14 +981,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
                     ),
                   )),
                   DataCell(SizedBox(
-                    width: 200,
+                    width: constraints.maxWidth > 800 ? 300 : 200,
                     child: Text(question.questionTextAr,
-                        overflow: TextOverflow.ellipsis),
+                        overflow: TextOverflow.ellipsis, maxLines: 2),
                   )),
                   DataCell(SizedBox(
-                    width: 200,
+                    width: constraints.maxWidth > 800 ? 300 : 200,
                     child: Text(question.answerTextAr,
-                        overflow: TextOverflow.ellipsis),
+                        overflow: TextOverflow.ellipsis, maxLines: 2),
                   )),
                   DataCell(Container(
                     padding:
@@ -1036,7 +1036,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                   )),
                 ]);
               }).toList(),
-      ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
