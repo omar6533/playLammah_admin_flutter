@@ -68,7 +68,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp.router(
-        title: 'SeenJeem Admin',
+        title: 'PlayLammah Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routerConfig: _appRouter.config(),
