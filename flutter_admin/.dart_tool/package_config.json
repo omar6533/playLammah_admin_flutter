@@ -111,7 +111,7 @@
     },
     {
       "name": "characters",
-      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/characters-1.4.0",
+      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/characters-1.4.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -293,7 +293,7 @@
       "name": "flutter",
       "rootUri": "file:///Users/omarsfd/development/flutter/packages/flutter",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.9"
     },
     {
       "name": "flutter_bloc",
@@ -317,13 +317,13 @@
       "name": "flutter_test",
       "rootUri": "file:///Users/omarsfd/development/flutter/packages/flutter_test",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.9"
     },
     {
       "name": "flutter_web_plugins",
       "rootUri": "file:///Users/omarsfd/development/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.9"
     },
     {
       "name": "frontend_server_client",
@@ -429,21 +429,21 @@
     },
     {
       "name": "matcher",
-      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/matcher-0.12.17",
+      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/matcher-0.12.19",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.7"
     },
     {
       "name": "material_color_utilities",
-      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/material_color_utilities-0.11.1",
+      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/material_color_utilities-0.13.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.5"
     },
     {
       "name": "meta",
-      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/meta-1.16.0",
+      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/meta-1.17.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.5"
     },
     {
       "name": "mime",
@@ -563,7 +563,7 @@
       "name": "sky_engine",
       "rootUri": "file:///Users/omarsfd/development/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.9"
     },
     {
       "name": "source_gen",
@@ -609,9 +609,9 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/test_api-0.7.6",
+      "rootUri": "file:///Users/omarsfd/.pub-cache/hosted/pub.dev/test_api-0.7.10",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.7"
     },
     {
       "name": "timing",
@@ -711,8 +711,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.9.2",
+  "generatorVersion": "3.11.1",
   "flutterRoot": "file:///Users/omarsfd/development/flutter",
-  "flutterVersion": "3.35.3",
+  "flutterVersion": "3.41.4",
   "pubCache": "file:///Users/omarsfd/.pub-cache"
 }
