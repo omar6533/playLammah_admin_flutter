@@ -13,7 +13,7 @@ class Sidebar extends StatelessWidget {
 
   static const _items = [
     (icon: Icons.dashboard_rounded, label: 'Dashboard', page: 'dashboard'),
-    (icon: Icons.people_rounded, label: 'Users', page: 'users'),
+    (icon: Icons.people_rounded, label: 'Customers', page: 'users'),
     (icon: Icons.gamepad_rounded, label: 'Games', page: 'games'),
     (icon: Icons.category_rounded, label: 'Categories', page: 'categories'),
     (icon: Icons.quiz_rounded, label: 'Questions', page: 'questions'),
