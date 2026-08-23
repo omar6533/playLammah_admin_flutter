@@ -1,47 +1,48 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand Palette
-  static const primaryRed = Color(0xFFEC0901);
-  static const secondaryRed = Color(0xFFFF525B);
-  static const offWhite = Color(0xFFEDEDED);
-  static const lightGray = Color(0xFFBDBDBD);
-  static const darkBlueGray = Color(0xFF556E78);
+  // ── Brand (matches PlayLammah client app) ───────────────────────────────────
+  static const primaryRed = Color(0xFFD64453);
+  static const navbarDark = Color(0xFF600522);   // sidebar background
 
-  // Semantic Aliases
+  // ── Semantic ─────────────────────────────────────────────────────────────────
   static const primary = primaryRed;
-  // Use Secondary Red as an accent/secondary variant, or potentially darkBlueGray depending on usage.
-  // Given "Secondary Red" name, let's map it here, but keep Dark Blue Gray accessible.
-  static const secondary = darkBlueGray;
-  static const accent = secondaryRed;
+  static const primaryLight = Color(0xFFFFE8EC);
+  static const primaryDark = navbarDark;
 
-  static const primaryDark = Color(0xFFC00701); // Darker shade of primaryRed
-  static const primaryLight = Color(0xFFFFE5E5); // Light shade of primaryRed
+  // ── Backgrounds ──────────────────────────────────────────────────────────────
+  static const background = Color(0xFFF5F6FA);   // page scaffold
+  static const surface = Colors.white;            // cards / panels
 
-  static const background = offWhite;
-  static const surface = Colors.white;
-
-  static const danger = Color(0xFFEF4444);
-  static const warning = Color(0xFFF59E0B);
-  static const success = Color(0xFF10B981);
-
-  static const textPrimary =
-      Color(0xFF1A1A1A); // Keep standard dark for body readability
-  static const textSecondary =
-      darkBlueGray; // Use brand color for distinct text elements
-  static const textLight = lightGray;
-
-  static const border = lightGray;
-
-  static const sidebarBg = darkBlueGray;
-  static const sidebarDivider =
-      Color(0xFF455A64); // Slightly darker/lighter than sidebarBg
+  // ── Sidebar ───────────────────────────────────────────────────────────────────
+  static const sidebarBg = navbarDark;
+  static const sidebarActive = primaryRed;
+  static const sidebarHover = Color(0xFF7A0A2E);
   static const sidebarText = Colors.white;
+  static const sidebarDivider = Color(0xFF7A1535);
 
-  // Variant Backwards Compatibility / Derived Colors
-  static const secondaryLight = Color(0xFFCFD8DC); // Light Blue Gray
-  static const secondaryDark = Color(0xFF37474F); // Darker Blue Gray
+  // ── Text ─────────────────────────────────────────────────────────────────────
+  static const textPrimary = Color(0xFF1A1A1A);
+  static const textSecondary = Color(0xFF6B7280);
+  static const textLight = Color(0xFF9CA3AF);
 
-  static const dangerLight = Color(0xFFFFEBEE); // Light Red
-  static const dangerDark = Color(0xFFB71C1C); // Dark Red
+  // ── Borders ──────────────────────────────────────────────────────────────────
+  static const border = Color(0xFFE5E7EB);
+  static const borderLight = Color(0xFFF3F4F6);
+
+  // ── Status ───────────────────────────────────────────────────────────────────
+  static const danger = Color(0xFFEF4444);
+  static const dangerLight = Color(0xFFFFEBEE);
+  static const dangerDark = Color(0xFFB91C1C);
+  static const warning = Color(0xFFF59E0B);
+  static const warningLight = Color(0xFFFFFBEB);
+  static const success = Color(0xFF10B981);
+  static const successLight = Color(0xFFECFDF5);
+
+  // ── Backwards-compat aliases (used in pages) ─────────────────────────────────
+  static const secondary = navbarDark;
+  static const accent = primaryRed;
+  static const offWhite = Color(0xFFF5F6FA);
+  static const secondaryLight = Color(0xFFFFE8EC);
+  static const secondaryDark = navbarDark;
 }

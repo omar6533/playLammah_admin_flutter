@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/auth/auth_bloc.dart';
+import '../blocs/auth/auth_event.dart';
+import '../theme/app_colors.dart';
 import '../widgets/sidebar.dart';
 import '../router/app_router.dart';
 
@@ -36,12 +40,48 @@ class HomePage extends StatelessWidget {
                 },
               ),
               Expanded(
-                child: child,
+                child: Column(
+                  children: [
+                    _buildTopBar(context),
+                    Expanded(child: child),
+                  ],
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Container(
+      height: 56,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          const Spacer(),
+          Image.asset(
+            'assets/images/logo_full.png',
+            height: 36,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 16),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded,
+                color: AppColors.textSecondary, size: 20),
+            tooltip: 'Sign out',
+            onPressed: () {
+              context.read<AuthBloc>().add(SignOutRequested());
+              context.router.replace(const LoginRoute());
+            },
+          ),
+        ],
+      ),
     );
   }
 
