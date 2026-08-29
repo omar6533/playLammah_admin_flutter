@@ -40,9 +40,10 @@ class CategoriesError extends CategoriesState {
 
 class CategoryOperationSuccess extends CategoriesState {
   final String message;
+  final bool shouldSync;
 
-  const CategoryOperationSuccess(this.message);
+  const CategoryOperationSuccess(this.message, {this.shouldSync = true});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, shouldSync];
 }

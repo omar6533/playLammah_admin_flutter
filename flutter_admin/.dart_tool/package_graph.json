@@ -18,6 +18,8 @@
         "flutter",
         "flutter_bloc",
         "google_fonts",
+        "gsheets",
+        "http",
         "intl",
         "universal_html",
         "uuid"
@@ -170,6 +172,27 @@
         "clock",
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "gsheets",
+      "version": "0.5.0",
+      "dependencies": [
+        "collection",
+        "googleapis",
+        "googleapis_auth",
+        "http",
+        "meta"
       ]
     },
     {
@@ -413,16 +436,6 @@
       "version": "3.2.2",
       "dependencies": [
         "async"
-      ]
-    },
-    {
-      "name": "http",
-      "version": "1.6.0",
-      "dependencies": [
-        "async",
-        "http_parser",
-        "meta",
-        "web"
       ]
     },
     {
@@ -807,6 +820,35 @@
       ]
     },
     {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "googleapis_auth",
+      "version": "1.6.0",
+      "dependencies": [
+        "args",
+        "crypto",
+        "google_identity_services_web",
+        "http",
+        "http_parser"
+      ]
+    },
+    {
+      "name": "googleapis",
+      "version": "11.4.0",
+      "dependencies": [
+        "_discoveryapis_commons",
+        "http"
+      ]
+    },
+    {
       "name": "path_provider",
       "version": "2.1.5",
       "dependencies": [
@@ -974,16 +1016,6 @@
       ]
     },
     {
-      "name": "http_parser",
-      "version": "4.1.2",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ]
-    },
-    {
       "name": "checked_yaml",
       "version": "2.0.4",
       "dependencies": [
@@ -1068,6 +1100,23 @@
       "dependencies": [
         "source_span",
         "string_scanner"
+      ]
+    },
+    {
+      "name": "google_identity_services_web",
+      "version": "0.3.3+1",
+      "dependencies": [
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "_discoveryapis_commons",
+      "version": "1.0.8",
+      "dependencies": [
+        "http",
+        "http_parser",
+        "meta"
       ]
     },
     {

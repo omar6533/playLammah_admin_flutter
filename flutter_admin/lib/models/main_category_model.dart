@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MainCategoryModel {
   final String id;
+  final String code;
   final String nameAr;
   final String? mediaUrl;
   final int displayOrder;
@@ -12,6 +13,7 @@ class MainCategoryModel {
 
   MainCategoryModel({
     required this.id,
+    required this.code,
     required this.nameAr,
     this.mediaUrl,
     required this.displayOrder,
@@ -25,6 +27,7 @@ class MainCategoryModel {
       Map<String, dynamic> data, String id) {
     return MainCategoryModel(
       id: id,
+      code: data['code'] ?? '',
       nameAr: data['name_ar'] ?? '',
       mediaUrl: data['media_url'],
       displayOrder: data['display_order'] ?? 0,
@@ -45,6 +48,7 @@ class MainCategoryModel {
 
   Map<String, dynamic> toFirestore() {
     return {
+      'code': code,
       'name_ar': nameAr,
       'media_url': mediaUrl,
       'display_order': displayOrder,

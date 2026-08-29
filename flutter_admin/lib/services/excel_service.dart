@@ -81,14 +81,16 @@ class ExcelService {
 
     List<String> headers = [];
     if (type == 'main-categories') {
-      headers = ['name_ar', 'display_order', 'is_active', 'media_url'];
+      // No media for main categories; code is the unique identifier
+      headers = ['code', 'name_ar', 'display_order', 'is_active'];
     } else if (type == 'sub-categories') {
       headers = [
-        'main_category_name_ar',
+        'main_category_code',
+        'code',
         'name_ar',
         'display_order',
         'is_active',
-        'media_url'
+        'media_url',
       ];
     } else if (type == 'questions') {
       headers = [
@@ -142,6 +144,7 @@ class ExcelService {
 
     sheet.appendRow([
       TextCellValue('ID'),
+      TextCellValue('Code'),
       TextCellValue('Name (Ar)'),
       TextCellValue('Order'),
       TextCellValue('Status'),
@@ -150,6 +153,7 @@ class ExcelService {
     for (var c in categories) {
       sheet.appendRow([
         TextCellValue(c.id),
+        TextCellValue(c.code),
         TextCellValue(c.nameAr),
         IntCellValue(c.displayOrder),
         TextCellValue(c.isActive ? 'Active' : 'Disabled'),
@@ -166,6 +170,7 @@ class ExcelService {
     sheet.appendRow([
       TextCellValue('ID'),
       TextCellValue('Main Category ID'),
+      TextCellValue('Code'),
       TextCellValue('Name (Ar)'),
       TextCellValue('Order'),
       TextCellValue('Status'),
@@ -175,6 +180,7 @@ class ExcelService {
       sheet.appendRow([
         TextCellValue(c.id),
         TextCellValue(c.mainCategoryId),
+        TextCellValue(c.code),
         TextCellValue(c.nameAr),
         IntCellValue(c.displayOrder),
         TextCellValue(c.isActive ? 'Active' : 'Disabled'),

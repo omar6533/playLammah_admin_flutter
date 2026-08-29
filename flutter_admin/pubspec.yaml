@@ -26,6 +26,10 @@ dependencies:
   # Routing
   auto_route: ^9.2.2
 
+  # Google Sheets integration
+  gsheets: ^0.5.0
+  http: ^1.2.0
+
   # Utilities
   intl: ^0.18.1
   file_picker: ^8.1.4

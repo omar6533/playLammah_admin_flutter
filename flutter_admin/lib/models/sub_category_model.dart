@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SubCategoryModel {
   final String id;
+  final String code;
   final String mainCategoryId;
   final String nameAr;
+  final String description;
   final String mediaUrl;
   final int displayOrder;
   final bool isActive;
@@ -12,8 +14,10 @@ class SubCategoryModel {
 
   SubCategoryModel({
     required this.id,
+    required this.code,
     required this.mainCategoryId,
     required this.nameAr,
+    this.description = '',
     required this.mediaUrl,
     required this.displayOrder,
     required this.isActive,
@@ -24,8 +28,10 @@ class SubCategoryModel {
   factory SubCategoryModel.fromFirestore(Map<String, dynamic> data, String id) {
     return SubCategoryModel(
       id: id,
+      code: data['code'] ?? '',
       mainCategoryId: data['main_category_id'] ?? '',
       nameAr: data['name_ar'] ?? '',
+      description: data['description'] ?? '',
       mediaUrl: data['media_url'] ?? '',
       displayOrder: data['display_order'] ?? 0,
       isActive: data['is_active'] ?? true,
@@ -44,8 +50,10 @@ class SubCategoryModel {
 
   Map<String, dynamic> toFirestore() {
     return {
+      'code': code,
       'main_category_id': mainCategoryId,
       'name_ar': nameAr,
+      'description': description,
       'media_url': mediaUrl,
       'display_order': displayOrder,
       'is_active': isActive,

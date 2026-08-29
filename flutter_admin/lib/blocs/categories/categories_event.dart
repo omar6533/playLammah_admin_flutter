@@ -73,3 +73,17 @@ class ToggleSubCategoryStatus extends CategoriesEvent {
   @override
   List<Object?> get props => [id, isActive];
 }
+
+class DeleteMainCategory extends CategoriesEvent {
+  final String id;
+  const DeleteMainCategory(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
+class DeleteSubCategory extends CategoriesEvent {
+  final String id;
+  const DeleteSubCategory(this.id);
+  @override
+  List<Object?> get props => [id];
+}

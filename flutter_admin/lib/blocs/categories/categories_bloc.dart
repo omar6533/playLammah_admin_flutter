@@ -14,6 +14,8 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
     on<CreateSubCategory>(_onCreateSubCategory);
     on<UpdateSubCategory>(_onUpdateSubCategory);
     on<ToggleSubCategoryStatus>(_onToggleSubCategoryStatus);
+    on<DeleteMainCategory>(_onDeleteMainCategory);
+    on<DeleteSubCategory>(_onDeleteSubCategory);
   }
 
   Future<void> _onLoadCategories(
@@ -119,6 +121,35 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
       await _firestoreService.updateSubCategory(event.id, {
         'is_active': event.isActive,
       });
+      add(const LoadCategories());
+    } catch (e) {
+      emit(CategoriesError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteMainCategory(
+    DeleteMainCategory event,
+    Emitter<CategoriesState> emit,
+  ) async {
+    emit(CategoriesLoading());
+    try {
+      await _firestoreService.deleteMainCategory(event.id);
+      // shouldSync:false — deletes must not overwrite the sheet (sheet is source of truth)
+      emit(const CategoryOperationSuccess('Main category deleted', shouldSync: false));
+      add(const LoadCategories());
+    } catch (e) {
+      emit(CategoriesError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteSubCategory(
+    DeleteSubCategory event,
+    Emitter<CategoriesState> emit,
+  ) async {
+    emit(CategoriesLoading());
+    try {
+      await _firestoreService.deleteSubCategory(event.id);
+      emit(const CategoryOperationSuccess('Sub category deleted', shouldSync: false));
       add(const LoadCategories());
     } catch (e) {
       emit(CategoriesError(e.toString()));
