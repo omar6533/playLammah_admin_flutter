@@ -37,6 +37,7 @@ class _CategoriesPageState extends State<CategoriesPage>
   bool _uploading = false;
   bool _importing = false;
   bool _syncing = false;
+  bool _deletingAll = false;
   // Prevents auto-sync to sheet while a sheet→Firestore sync is in progress
   bool _syncingFromSheet = false;
 
@@ -93,6 +94,11 @@ class _CategoriesPageState extends State<CategoriesPage>
               ? (category as MainCategoryModel).displayOrder.toString()
               : (category as SubCategoryModel).displayOrder.toString())
           : mainCategories.length.toString(),
+    );
+    final descCtrl = TextEditingController(
+      text: isEditing && !_isMainTab
+          ? (category as SubCategoryModel).description
+          : '',
     );
 
     String? mediaUrl = isEditing && !_isMainTab
@@ -180,6 +186,16 @@ class _CategoriesPageState extends State<CategoriesPage>
                   ),
                   const SizedBox(height: 16),
 
+                  // Description (sub only)
+                  if (!_isMainTab) ...[
+                    CustomTextField(
+                      label: 'Description (نبذة تعريفية)',
+                      controller: descCtrl,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Display order
                   CustomTextField(
                     label: 'Display Order *',
@@ -202,7 +218,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              mediaUrl!,
+                              _driveImageUrl(mediaUrl!),
                               width: 128,
                               height: 128,
                               fit: BoxFit.cover,
@@ -348,6 +364,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                           'code': codeCtrl.text.trim().toUpperCase(),
                           'main_category_id': selectedMainCatId!,
                           'name_ar': nameCtrl.text,
+                          'description': descCtrl.text.trim(),
                           'display_order':
                               int.tryParse(orderCtrl.text) ?? 0,
                           'is_active': isActive,
@@ -565,6 +582,118 @@ class _CategoriesPageState extends State<CategoriesPage>
     }
   }
 
+  // ── Delete All ────────────────────────────────────────────────────────────
+
+  Future<void> _handleDeleteAll(
+    List<MainCategoryModel> mainCats,
+    List<SubCategoryModel> subCats,
+  ) async {
+    final isMain = _isMainTab;
+    final label = isMain ? 'main categories' : 'sub categories';
+    final count = isMain ? mainCats.length : subCats.length;
+    if (count == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No $label to delete.')),
+      );
+      return;
+    }
+
+    // Double-confirm: type DELETE to proceed
+    final confirmCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDs) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.red, size: 24),
+              const SizedBox(width: 8),
+              Text('Delete All ${isMain ? 'Main' : 'Sub'} Categories'),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will permanently delete all $count $label from Firestore. '
+                  'This cannot be undone.',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Type DELETE to confirm:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'DELETE',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (_) => setDs(() {}),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white),
+              onPressed: confirmCtrl.text == 'DELETE'
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              child: const Text('Delete All'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _deletingAll = true);
+    try {
+      int deleted;
+      if (isMain) {
+        deleted = await _firestoreService.deleteAllMainCategories();
+      } else {
+        deleted = await _firestoreService.deleteAllSubCategories();
+      }
+      if (mounted) {
+        context.read<CategoriesBloc>().add(const LoadCategories());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted $deleted $label.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete all failed: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deletingAll = false);
+    }
+  }
+
   String _formatDate(DateTime date) =>
       DateFormat('MMM dd, yyyy').format(date);
 
@@ -692,6 +821,28 @@ class _CategoriesPageState extends State<CategoriesPage>
                             ),
                             onPressed: () =>
                                 _handleImport(mainCats, subCats),
+                          ),
+                          OutlinedButton.icon(
+                            icon: _deletingAll
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.red),
+                                  )
+                                : const Icon(Icons.delete_sweep_outlined,
+                                    size: 16),
+                            label: Text(_isMainTab
+                                ? 'Delete All Main'
+                                : 'Delete All Sub'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                            onPressed: (_deletingAll || _syncing)
+                                ? null
+                                : () => _handleDeleteAll(mainCats, subCats),
                           ),
                           CustomButton(
                             text: _isMainTab
@@ -1093,8 +1244,16 @@ class _CategoriesPageState extends State<CategoriesPage>
                     DataCell(Text(_formatDate(c.createdAt))),
                     DataCell(Row(children: [
                       IconButton(
+                        icon: const Icon(Icons.visibility_outlined, size: 18),
+                        color: AppColors.textSecondary,
+                        tooltip: 'View',
+                        onPressed: () =>
+                            _showSubCategoryView(context, c, mainCats),
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.edit, size: 18),
                         color: AppColors.primary,
+                        tooltip: 'Edit',
                         onPressed: () =>
                             _showCategoryDialog(context, mainCats, c),
                       ),
@@ -1132,24 +1291,159 @@ class _CategoriesPageState extends State<CategoriesPage>
   /// loaded by Image.network in Flutter web.
   /// Input:  https://drive.google.com/file/d/FILE_ID/view?usp=sharing
   /// Output: https://lh3.googleusercontent.com/d/FILE_ID
+  /// Converts any Google Drive sharing/view URL to a direct thumbnail URL
+  /// that Flutter web can load without CORS issues.
   String _driveImageUrl(String url) {
     if (url.isEmpty) return url;
+    String? fileId;
     if (url.contains('drive.google.com/file/d/')) {
       final start = url.indexOf('/file/d/') + 8;
       var end = url.indexOf('/', start);
       if (end < 0) end = url.length;
-      final fileId = url.substring(start, end);
-      return 'https://lh3.googleusercontent.com/d/$fileId';
-    }
-    if (url.contains('drive.google.com/open?id=') ||
+      fileId = url.substring(start, end);
+    } else if (url.contains('drive.google.com/open?id=') ||
         url.contains('drive.google.com/uc?')) {
       final idStart = url.indexOf('id=') + 3;
       var idEnd = url.indexOf('&', idStart);
       if (idEnd < 0) idEnd = url.length;
-      final fileId = url.substring(idStart, idEnd);
-      return 'https://lh3.googleusercontent.com/d/$fileId';
+      fileId = url.substring(idStart, idEnd);
+    }
+    if (fileId != null && fileId.isNotEmpty) {
+      // uc?export=view returns the file directly (no redirect) for publicly
+      // shared Drive files and works with Flutter web's CanvasKit renderer.
+      return 'https://drive.google.com/uc?export=view&id=$fileId';
     }
     return url;
+  }
+
+  // ── Sub-category view dialog ───────────────────────────────────────────────
+
+  void _showSubCategoryView(
+      BuildContext context, SubCategoryModel c, List<MainCategoryModel> mainCats) {
+    final mainName = mainCats
+            .where((m) => m.id == c.mainCategoryId)
+            .firstOrNull
+            ?.nameAr ??
+        'N/A';
+    final imageUrl = _driveImageUrl(c.mediaUrl);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Row(
+          children: [
+            _codeChip(c.code),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(c.nameAr,
+                  style: const TextStyle(fontSize: 18),
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SizedBox(
+            width: 520,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Image
+                if (c.mediaUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imageUrl,
+                      width: double.infinity,
+                      height: 220,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: double.infinity,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image,
+                                size: 48, color: Colors.grey[400]),
+                            const SizedBox(height: 8),
+                            Text('Image could not load',
+                                style: TextStyle(color: Colors.grey[500])),
+                            const SizedBox(height: 4),
+                            Text(imageUrl,
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.grey[400]),
+                                textAlign: TextAlign.center),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                _viewRow('Main Category', mainName),
+                _viewRow('Code', c.code),
+                _viewRow('Display Order', c.displayOrder.toString()),
+                _viewRow('Status', c.isActive ? 'Active' : 'Inactive'),
+                _viewRow('Created', _formatDate(c.createdAt)),
+                _viewRow('Updated', _formatDate(c.updatedAt)),
+                if (c.description.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Description',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Colors.grey)),
+                  const SizedBox(height: 6),
+                  Text(c.description,
+                      style: const TextStyle(fontSize: 14, height: 1.5)),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.edit, size: 16),
+            label: const Text('Edit'),
+            onPressed: () {
+              Navigator.pop(context);
+              _showCategoryDialog(context, mainCats, c);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _viewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.grey)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(fontSize: 14)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _confirmDelete(

@@ -5,13 +5,21 @@ import '../models/sub_category_model.dart';
 import 'firestore_service.dart';
 
 class GoogleSheetsService {
-  static final _gsheets = GSheets(kGoogleServiceAccountJson);
-
+  // Non-static: a fresh GSheets (and fresh JWT) is created for each sync call,
+  // avoiding invalid_grant errors caused by stale cached credentials.
+  GSheets? _gsheets;
   Spreadsheet? _spreadsheet;
 
   Future<Worksheet?> _sheet({bool refresh = false}) async {
-    if (refresh || _spreadsheet == null) {
-      _spreadsheet = await _gsheets.spreadsheet(kSpreadsheetId);
+    if (refresh || _spreadsheet == null || _gsheets == null) {
+      _gsheets = GSheets(kGoogleServiceAccountJson);
+      // FORMULA render returns raw formula text for hyperlink cells
+      // (e.g. =HYPERLINK("drive_url","display_text")) so we can extract the URL.
+      // Plain text cells are unaffected — they still return their raw value.
+      _spreadsheet = await _gsheets!.spreadsheet(
+        kSpreadsheetId,
+        render: ValueRenderOption.formula,
+      );
     }
     // Iterate all sheets and compare stripped/normalized titles
     for (final sheet in _spreadsheet!.sheets) {
@@ -32,7 +40,8 @@ class GoogleSheetsService {
 
   /// Returns all worksheet titles — useful for diagnosing name mismatches.
   Future<List<String>> getWorksheetTitles() async {
-    _spreadsheet ??= await _gsheets.spreadsheet(kSpreadsheetId);
+    _gsheets ??= GSheets(kGoogleServiceAccountJson);
+    _spreadsheet ??= await _gsheets!.spreadsheet(kSpreadsheetId);
     return _spreadsheet!.sheets.map((s) => s.title).toList();
   }
 
@@ -79,6 +88,25 @@ class GoogleSheetsService {
     return filtered;
   }
 
+  /// Extracts a plain URL from a cell value that may be:
+  ///   - A raw URL: returned as-is
+  ///   - A HYPERLINK formula: =HYPERLINK("url","text") → returns url
+  ///   - Plain display text (not a URL): returns empty string
+  String _extractUrl(String cell) {
+    final c = cell.trim();
+    if (c.isEmpty) return '';
+    // Handle =HYPERLINK("url") or =HYPERLINK("url","text")
+    if (c.startsWith('=HYPERLINK(')) {
+      final match = RegExp(r'=HYPERLINK\("([^"]+)"').firstMatch(c);
+      if (match != null) return match.group(1) ?? '';
+    }
+    // Already a plain URL
+    if (c.startsWith('http://') || c.startsWith('https://')) return c;
+    // Drive open URL (sometimes starts with drive://)
+    if (c.startsWith('drive://')) return c;
+    return '';
+  }
+
   /// Parses raw rows into deduplicated main-category and sub-category maps.
   /// Columns (after fromColumn:2 skips the empty col A):
   ///   [0]=كود الفئة  [1]=اسم الفئة  [2]=كود الصنف  [3]=اسم الصنف
@@ -104,7 +132,8 @@ class GoogleSheetsService {
       final subCode    = row.length > 2 ? row[2].trim() : '';
       final subName    = row.length > 3 ? row[3].trim() : '';
       final description = row.length > 4 ? row[4].trim() : '';
-      final mediaUrl    = row.length > 5 ? row[5].trim() : '';
+      // Column G may be a =HYPERLINK("url","text") formula; _extractUrl handles both
+      final mediaUrl    = row.length > 5 ? _extractUrl(row[5]) : '';
       // Row number in the sheet data (1-based)
       final rowNumber  = (i + 1).toString();
 
@@ -151,7 +180,9 @@ class GoogleSheetsService {
   /// Returns a summary of what was created/updated/skipped.
   Future<({int mainCreated, int mainUpdated, int subCreated, int subUpdated, int skipped})>
       syncFromSheetToFirestore(FirestoreService firestoreService) async {
-    // Force a fresh connection to pick up latest sheet data
+    // Force a completely fresh GSheets instance and connection each sync
+    // to avoid invalid_grant errors from stale JWT state.
+    _gsheets = null;
     _spreadsheet = null;
     final rows = await readCategoryRows();
     final parsed = parseCategoryRows(rows);

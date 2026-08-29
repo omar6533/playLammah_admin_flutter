@@ -145,6 +145,14 @@ class FirestoreService {
     await _db.collection('main_categories').doc(id).delete();
   }
 
+  Future<int> deleteAllMainCategories() async {
+    final snap = await _db.collection('main_categories').get();
+    final batch = _db.batch();
+    for (final doc in snap.docs) batch.delete(doc.reference);
+    await batch.commit();
+    return snap.docs.length;
+  }
+
   // Sub Categories
   Future<List<SubCategoryModel>> getSubCategories(
       [String? mainCategoryId]) async {
@@ -183,6 +191,21 @@ class FirestoreService {
 
   Future<void> deleteSubCategory(String id) async {
     await _db.collection('sub_categories').doc(id).delete();
+  }
+
+  Future<int> deleteAllSubCategories() async {
+    final snap = await _db.collection('sub_categories').get();
+    // Firestore batches are limited to 500 ops; chunk if needed
+    var deleted = 0;
+    final docs = snap.docs;
+    for (var i = 0; i < docs.length; i += 500) {
+      final batch = _db.batch();
+      final chunk = docs.sublist(i, (i + 500).clamp(0, docs.length));
+      for (final doc in chunk) batch.delete(doc.reference);
+      await batch.commit();
+      deleted += chunk.length;
+    }
+    return deleted;
   }
 
   // Questions
