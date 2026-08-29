@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:gsheets/gsheets.dart';
+import 'package:googleapis_auth/auth_io.dart';
 import '../config/google_config.dart';
 import '../models/main_category_model.dart';
 import '../models/sub_category_model.dart';
@@ -47,8 +49,101 @@ class GoogleSheetsService {
 
   // ── Read ─────────────────────────────────────────────────────────────────
 
+  /// DEBUG: Returns the first [count] raw rows from the sheet (no filtering).
+  Future<String> debugReadFirstRows({int count = 5}) async {
+    _gsheets = null;
+    _spreadsheet = null;
+    final ws = await _sheet();
+    if (ws == null) return 'Worksheet not found';
+    final all = await ws.values.allRows(fromColumn: 2);
+    final sb = StringBuffer();
+    sb.writeln('Total sheet rows: ${all.length}');
+    for (var ri = 0; ri < all.length && ri < count; ri++) {
+      final row = all[ri];
+      sb.writeln('--- Row $ri (${row.length} cols) ---');
+      for (var ci = 0; ci < row.length; ci++) {
+        if (row[ci].isNotEmpty) sb.writeln('  [$ci]: ${row[ci]}');
+      }
+    }
+    return sb.isEmpty ? '(all empty)' : sb.toString();
+  }
+
+  /// DEBUG: Scans ALL rows and returns any row that has content past column 3
+  /// (i.e. has description or image data). Used to diagnose image column index.
+  Future<String> debugFindImageRows() async {
+    _gsheets = null;
+    _spreadsheet = null;
+    final ws = await _sheet();
+    if (ws == null) return 'Worksheet not found';
+    final all = await ws.values.allRows(fromColumn: 2);
+    final sb = StringBuffer();
+    sb.writeln('Total rows: ${all.length}');
+    var found = 0;
+    for (var ri = 0; ri < all.length; ri++) {
+      final row = all[ri];
+      // Show rows with content beyond the 4 base columns
+      final hasExtra = row.length > 4 && row.skip(4).any((c) => c.isNotEmpty);
+      if (hasExtra) {
+        found++;
+        sb.writeln('--- Row $ri (${row.length} cols) ---');
+        for (var ci = 0; ci < row.length; ci++) {
+          if (row[ci].isNotEmpty) sb.writeln('  [$ci]: ${row[ci]}');
+        }
+      }
+    }
+    if (found == 0) sb.writeln('(no rows with content past col index 3)');
+    return sb.toString();
+  }
+
+  /// Fetches cell-property hyperlinks for the image column (P) from the
+  /// Sheets REST API. The gsheets package only reads cell values — it cannot
+  /// read URLs stored via "Insert Link" (Ctrl+K). This method fills that gap.
+  /// Returns a map of 0-based sheet row index → URL.
+  Future<Map<int, String>> _fetchImageColumnHyperlinks() async {
+    try {
+      final credsJson = jsonDecode(kGoogleServiceAccountJson) as Map<String, dynamic>;
+      final credentials = ServiceAccountCredentials.fromJson(credsJson);
+      final scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+      final client = await clientViaServiceAccount(credentials, scopes);
+      try {
+        // Image column index 14 (from fromColumn:2) = column P (B=0 → P=14, so sheet col = 2+14 = 16 = P)
+        final uri = Uri.https(
+          'sheets.googleapis.com',
+          '/v4/spreadsheets/$kSpreadsheetId',
+          {
+            'ranges': '$kCategorySheetName!P:P',
+            'fields': 'sheets(data(rowData(values(hyperlink))))',
+          },
+        );
+        final response = await client.get(uri);
+        if (response.statusCode != 200) return {};
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final sheets = body['sheets'] as List?;
+        if (sheets == null || sheets.isEmpty) return {};
+        final data = (sheets[0] as Map)['data'] as List?;
+        if (data == null || data.isEmpty) return {};
+        final rowData = (data[0] as Map)['rowData'] as List?;
+        if (rowData == null) return {};
+        final result = <int, String>{};
+        for (int i = 0; i < rowData.length; i++) {
+          final values = ((rowData[i] as Map?)?['values'] as List?);
+          if (values == null || values.isEmpty) continue;
+          final hyperlink = (values[0] as Map?)?['hyperlink'] as String?;
+          if (hyperlink != null && hyperlink.isNotEmpty) {
+            result[i] = hyperlink;
+          }
+        }
+        return result;
+      } finally {
+        client.close();
+      }
+    } catch (_) {
+      return {};
+    }
+  }
+
   /// Returns data rows from the categories sheet, skipping title/header rows.
-  /// Each row is [mainCode, mainName, subCode, subName].
+  /// Each row is [mainCode, mainName, subCode, subName, description, mediaUrl].
   Future<List<List<String>>> readCategoryRows() async {
     final ws = await _sheet();
     if (ws == null) {
@@ -63,18 +158,35 @@ class GoogleSheetsService {
     if (all.isEmpty) {
       throw Exception('Worksheet "${ws.title}" found but contains 0 rows.');
     }
+
+    // Fetch cell-property hyperlinks for the image column (P) separately,
+    // because "Insert Link" stores the URL in a cell property, not the value.
+    final hyperlinks = await _fetchImageColumnHyperlinks();
+
+    // Merge hyperlinks into raw rows before filtering
+    final allMerged = <List<String>>[];
+    for (int i = 0; i < all.length; i++) {
+      final row = List<String>.from(all[i]);
+      final link = hyperlinks[i];
+      if (link != null && link.isNotEmpty) {
+        // Ensure the list is long enough to hold index 14
+        while (row.length <= 14) row.add('');
+        // Only overwrite if the cell value isn't already a usable URL
+        if (_extractUrl(row[14]).isEmpty) row[14] = link;
+      }
+      allMerged.add(row);
+    }
+
     // Skip truly empty rows and known header rows.
     // NOTE: merged-cell continuation rows have an empty mainCode (row[0]) but a
     // non-empty subCode (row[2]). We must keep those rows so parseCategoryRows
     // can inherit the main-category via lastMainCode/lastMainName.
     const headerValues = {'كود الفئة', 'كود الصنف', 'الفئة', 'الصنف', 'code', 'header'};
-    final filtered = all.where((row) {
+    final filtered = allMerged.where((row) {
       if (row.isEmpty) return false;
       final mainCode = row[0].trim();
       final subCode  = row.length > 2 ? row[2].trim() : '';
-      // Keep only rows that carry something useful
       if (mainCode.isEmpty && subCode.isEmpty) return false;
-      // Drop header rows
       if (headerValues.contains(mainCode) ||
           headerValues.contains(mainCode.toLowerCase())) return false;
       return true;
@@ -110,7 +222,7 @@ class GoogleSheetsService {
   /// Parses raw rows into deduplicated main-category and sub-category maps.
   /// Columns (after fromColumn:2 skips the empty col A):
   ///   [0]=كود الفئة  [1]=اسم الفئة  [2]=كود الصنف  [3]=اسم الصنف
-  ///   [4]=نبذة تعريفية للأصناف  [5]=ارفاق صورة للصنف (media_url)
+  ///   [4]=نبذة تعريفية للأصناف  [14]=ارفاق صورة للصنف (media_url)
   ({
     List<Map<String, String>> mainCategories,
     List<Map<String, String>> subCategories,
@@ -132,8 +244,8 @@ class GoogleSheetsService {
       final subCode    = row.length > 2 ? row[2].trim() : '';
       final subName    = row.length > 3 ? row[3].trim() : '';
       final description = row.length > 4 ? row[4].trim() : '';
-      // Column G may be a =HYPERLINK("url","text") formula; _extractUrl handles both
-      final mediaUrl    = row.length > 5 ? _extractUrl(row[5]) : '';
+      // Column O (index 14 from fromColumn:2) = ارفاق صورة للصنف
+      final mediaUrl    = row.length > 14 ? _extractUrl(row[14]) : '';
       // Row number in the sheet data (1-based)
       final rowNumber  = (i + 1).toString();
 

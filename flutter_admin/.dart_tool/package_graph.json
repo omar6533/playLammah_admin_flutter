@@ -18,6 +18,7 @@
         "flutter",
         "flutter_bloc",
         "google_fonts",
+        "googleapis_auth",
         "gsheets",
         "http",
         "intl",
@@ -172,6 +173,17 @@
         "clock",
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "googleapis_auth",
+      "version": "1.6.0",
+      "dependencies": [
+        "args",
+        "crypto",
+        "google_identity_services_web",
+        "http",
+        "http_parser"
       ]
     },
     {
@@ -830,14 +842,11 @@
       ]
     },
     {
-      "name": "googleapis_auth",
-      "version": "1.6.0",
+      "name": "google_identity_services_web",
+      "version": "0.3.3+1",
       "dependencies": [
-        "args",
-        "crypto",
-        "google_identity_services_web",
-        "http",
-        "http_parser"
+        "meta",
+        "web"
       ]
     },
     {
@@ -1100,14 +1109,6 @@
       "dependencies": [
         "source_span",
         "string_scanner"
-      ]
-    },
-    {
-      "name": "google_identity_services_web",
-      "version": "0.3.3+1",
-      "dependencies": [
-        "meta",
-        "web"
       ]
     },
     {

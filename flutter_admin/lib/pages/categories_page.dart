@@ -217,17 +217,11 @@ class _CategoriesPageState extends State<CategoriesPage>
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              _driveImageUrl(mediaUrl!),
+                            child: _DriveImage(
+                              rawUrl: mediaUrl!,
                               width: 128,
                               height: 128,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 128,
-                                height: 128,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.broken_image),
-                              ),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           Positioned(
@@ -803,6 +797,33 @@ class _CategoriesPageState extends State<CategoriesPage>
                             onPressed: _handleExport,
                           ),
                           OutlinedButton.icon(
+                            icon: const Icon(Icons.bug_report_outlined, size: 16),
+                            label: const Text('Debug Sheet'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.orange,
+                              side: const BorderSide(color: Colors.orange),
+                            ),
+                            onPressed: () async {
+                              // Show which rows actually have image/description data
+                              final result = await _sheetsService.debugFindImageRows();
+                              if (mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Image Rows Debug'),
+                                    content: SingleChildScrollView(
+                                      child: SelectableText(
+                                        result,
+                                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                                      ),
+                                    ),
+                                    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          OutlinedButton.icon(
                             icon: const Icon(Icons.sync_rounded, size: 16),
                             label: const Text('Sync Now'),
                             style: OutlinedButton.styleFrom(
@@ -1226,18 +1247,11 @@ class _CategoriesPageState extends State<CategoriesPage>
                               color: Colors.grey[200],
                               child: Icon(Icons.image, color: Colors.grey[400]),
                             )
-                          : Image.network(
-                              _driveImageUrl(c.mediaUrl),
+                          : _DriveImage(
+                              rawUrl: c.mediaUrl,
                               width: 48,
                               height: 48,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 48,
-                                height: 48,
-                                color: Colors.grey[200],
-                                child: Icon(Icons.image,
-                                    color: Colors.grey[400]),
-                              ),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                     )),
                     DataCell(_statusBadge(c.isActive)),
@@ -1289,33 +1303,6 @@ class _CategoriesPageState extends State<CategoriesPage>
 
   /// Converts a Google Drive sharing link to a thumbnail URL that can be
   /// loaded by Image.network in Flutter web.
-  /// Input:  https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-  /// Output: https://lh3.googleusercontent.com/d/FILE_ID
-  /// Converts any Google Drive sharing/view URL to a direct thumbnail URL
-  /// that Flutter web can load without CORS issues.
-  String _driveImageUrl(String url) {
-    if (url.isEmpty) return url;
-    String? fileId;
-    if (url.contains('drive.google.com/file/d/')) {
-      final start = url.indexOf('/file/d/') + 8;
-      var end = url.indexOf('/', start);
-      if (end < 0) end = url.length;
-      fileId = url.substring(start, end);
-    } else if (url.contains('drive.google.com/open?id=') ||
-        url.contains('drive.google.com/uc?')) {
-      final idStart = url.indexOf('id=') + 3;
-      var idEnd = url.indexOf('&', idStart);
-      if (idEnd < 0) idEnd = url.length;
-      fileId = url.substring(idStart, idEnd);
-    }
-    if (fileId != null && fileId.isNotEmpty) {
-      // uc?export=view returns the file directly (no redirect) for publicly
-      // shared Drive files and works with Flutter web's CanvasKit renderer.
-      return 'https://drive.google.com/uc?export=view&id=$fileId';
-    }
-    return url;
-  }
-
   // ── Sub-category view dialog ───────────────────────────────────────────────
 
   void _showSubCategoryView(
@@ -1325,7 +1312,6 @@ class _CategoriesPageState extends State<CategoriesPage>
             .firstOrNull
             ?.nameAr ??
         'N/A';
-    final imageUrl = _driveImageUrl(c.mediaUrl);
 
     showDialog(
       context: context,
@@ -1352,34 +1338,11 @@ class _CategoriesPageState extends State<CategoriesPage>
                 if (c.mediaUrl.isNotEmpty) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      imageUrl,
+                    child: _DriveImage(
+                      rawUrl: c.mediaUrl,
                       width: double.infinity,
                       height: 220,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: double.infinity,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.broken_image,
-                                size: 48, color: Colors.grey[400]),
-                            const SizedBox(height: 8),
-                            Text('Image could not load',
-                                style: TextStyle(color: Colors.grey[500])),
-                            const SizedBox(height: 4),
-                            Text(imageUrl,
-                                style: TextStyle(
-                                    fontSize: 10, color: Colors.grey[400]),
-                                textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -1512,4 +1475,145 @@ class _CategoriesPageState extends State<CategoriesPage>
       ),
     );
   }
+}
+
+/// Loads a Google Drive image by trying three URL formats in order,
+/// then shows error details + retry on total failure.
+class _DriveImage extends StatefulWidget {
+  final String rawUrl;
+  final double width;
+  final double height;
+  final BoxFit fit;
+  final BorderRadius? borderRadius;
+
+  const _DriveImage({
+    required this.rawUrl,
+    required this.width,
+    required this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+  });
+
+  @override
+  State<_DriveImage> createState() => _DriveImageState();
+}
+
+class _DriveImageState extends State<_DriveImage> {
+  late List<String> _urls;
+  int _index = 0;
+  String? _lastError;
+
+  @override
+  void initState() {
+    super.initState();
+    _urls = _buildUrls(widget.rawUrl);
+  }
+
+  static List<String> _buildUrls(String raw) {
+    String? id;
+    if (raw.contains('/file/d/')) {
+      final s = raw.indexOf('/file/d/') + 8;
+      var e = raw.indexOf('/', s);
+      if (e < 0) e = raw.length;
+      id = raw.substring(s, e);
+    } else if (raw.contains('id=')) {
+      final s = raw.indexOf('id=') + 3;
+      var e = raw.indexOf('&', s);
+      if (e < 0) e = raw.length;
+      id = raw.substring(s, e);
+    }
+    if (id == null || id.isEmpty) return [raw];
+    return [
+      'https://lh3.googleusercontent.com/d/$id',           // CDN – best CORS support
+      'https://drive.google.com/thumbnail?id=$id&sz=w1000', // thumbnail API
+      'https://drive.google.com/uc?export=view&id=$id',     // legacy direct link
+    ];
+  }
+
+  void _retry() => setState(() { _index = 0; _lastError = null; });
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.rawUrl.isEmpty || _urls.isEmpty) {
+      return _blank();
+    }
+    if (_index >= _urls.length) return _errorView();
+
+    return Image.network(
+      _urls[_index],
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      loadingBuilder: (ctx, child, progress) =>
+          progress == null ? child : _loading(),
+      errorBuilder: (ctx, err, _) {
+        _lastError = 'Format ${_index + 1} (${_urls[_index].split('/')[2]}): $err';
+        if (_index + 1 < _urls.length) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _index++);
+          });
+          return _loading();
+        }
+        return _errorView();
+      },
+    );
+  }
+
+  Widget _blank() => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: widget.borderRadius,
+        ),
+        child: Icon(Icons.image, color: Colors.grey[400]),
+      );
+
+  Widget _loading() => Container(
+        width: widget.width,
+        height: widget.height,
+        color: Colors.grey[100],
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+
+  Widget _errorView() => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: widget.borderRadius,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image_outlined, size: 36, color: Colors.grey[400]),
+            const SizedBox(height: 6),
+            Text('Image failed to load',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            if (_lastError != null) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  _lastError!,
+                  style: TextStyle(fontSize: 9, color: Colors.red[300]),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            TextButton.icon(
+              icon: const Icon(Icons.refresh, size: 14),
+              label: const Text('Retry', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              ),
+              onPressed: _retry,
+            ),
+          ],
+        ),
+      );
 }
