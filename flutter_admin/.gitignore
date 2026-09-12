@@ -38,7 +38,6 @@ ios/Runner/GeneratedPluginRegistrant.m
 macos/Runner/GeneratedPluginRegistrant.swift
 
 # Web related
-lib/generated_plugin_registrant.dart
 
 # Avoid committing generated files
 *.g.dart

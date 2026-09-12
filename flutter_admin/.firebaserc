@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "allmahgame"
+  },
+  "targets": {
+    "allmahgame": {
+      "hosting": {
+        "admin": ["allmahgame-admin"]
+      }
+    }
+  }
+}
