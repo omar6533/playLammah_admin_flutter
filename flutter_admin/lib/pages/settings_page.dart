@@ -23,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final formKey = GlobalKey<FormState>();
     bool loading = false;
     bool showPass = false;
+    String selectedRole = 'cms_manager';
 
     await showDialog(
       context: context,
@@ -82,6 +83,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    value: selectedRole,
+                    decoration: InputDecoration(
+                      labelText: 'Role',
+                      prefixIcon: const Icon(Icons.badge_outlined, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'admin', child: Text('Admin — can add portal users')),
+                      DropdownMenuItem(value: 'cms_manager', child: Text('CMS Manager — can manage questions & categories')),
+                    ],
+                    onChanged: (v) => setDialogState(() => selectedRole = v ?? 'cms_manager'),
+                  ),
                 ],
               ),
             ),
@@ -105,6 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         await _authService.createAdminUser(
                           emailCtrl.text.trim(),
                           passCtrl.text,
+                          selectedRole,
                         );
                         if (ctx.mounted) Navigator.of(ctx).pop();
                         _showSnackbar('User ${emailCtrl.text.trim()} created successfully.', success: true);
@@ -275,6 +296,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final me = _authService.currentUser;
+    final isAdmin = true; // admin sees all settings; cms_manager can't reach this page
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -313,6 +335,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
 
+            if (isAdmin) ...[
             const SizedBox(height: 20),
 
             // ── Portal Users ────────────────────────────────────────────────
@@ -469,6 +492,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
             ),
+            ], // end if (isAdmin)
           ],
         ),
       ),

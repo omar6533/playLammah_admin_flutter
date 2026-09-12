@@ -454,4 +454,209 @@ class GoogleSheetsService {
       await ws.values.insertRows(kCategoryDataRow + rows.length, emptyRows);
     }
   }
+
+  // ── Question sync ────────────────────────────────────────────────────────
+
+  /// Fetches hyperlinks for ALL cells in a given sheet tab.
+  /// Returns {sheetRowIndex → {colIndex → url}}.
+  Future<Map<int, Map<int, String>>> _fetchAllHyperlinksForSheet(String sheetTabName) async {
+    try {
+      final credsJson = jsonDecode(kGoogleServiceAccountJson) as Map<String, dynamic>;
+      final credentials = ServiceAccountCredentials.fromJson(credsJson);
+      const scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+      final client = await clientViaServiceAccount(credentials, scopes);
+      try {
+        final uri = Uri.https(
+          'sheets.googleapis.com',
+          '/v4/spreadsheets/$kSpreadsheetId',
+          {
+            'ranges': '$sheetTabName!A:Z',
+            'fields': 'sheets(data(rowData(values(hyperlink))))',
+          },
+        );
+        final response = await client.get(uri);
+        if (response.statusCode != 200) return {};
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final sheets = body['sheets'] as List?;
+        if (sheets == null || sheets.isEmpty) return {};
+        final data = (sheets[0] as Map)['data'] as List?;
+        if (data == null || data.isEmpty) return {};
+        final rowData = (data[0] as Map)['rowData'] as List?;
+        if (rowData == null) return {};
+        final result = <int, Map<int, String>>{};
+        for (int ri = 0; ri < rowData.length; ri++) {
+          final values = ((rowData[ri] as Map?)?['values'] as List?);
+          if (values == null) continue;
+          for (int ci = 0; ci < values.length; ci++) {
+            final hyperlink = (values[ci] as Map?)?['hyperlink'] as String?;
+            if (hyperlink != null && hyperlink.isNotEmpty) {
+              result.putIfAbsent(ri, () => {})[ci] = hyperlink;
+            }
+          }
+        }
+        return result;
+      } finally {
+        client.close();
+      }
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Reads a question sheet tab (e.g. 'الفئة - حول العالم') and syncs its
+  /// questions to Firestore.
+  ///
+  /// Column detection is header-based (Arabic), so column order doesn't matter.
+  /// Media URLs are fetched via the Sheets REST API (handles "Insert Link").
+  ///
+  /// Returns the number of questions written.
+  Future<int> syncQuestionsFromTab(
+    String sheetTabName,
+    List<SubCategoryModel> subCategories,
+    FirestoreService firestoreService,
+  ) async {
+    _gsheets = null;
+    _spreadsheet = null;
+    _gsheets = GSheets(kGoogleServiceAccountJson);
+    _spreadsheet = await _gsheets!.spreadsheet(
+      kSpreadsheetId,
+      render: ValueRenderOption.formula,
+    );
+
+    // Find the sheet tab by normalised name
+    Worksheet? ws;
+    final tabNorm = sheetTabName.replaceAll(RegExp(r'\s'), '');
+    for (final sheet in _spreadsheet!.sheets) {
+      if (sheet.title.replaceAll(RegExp(r'\s'), '') == tabNorm) {
+        ws = sheet;
+        break;
+      }
+    }
+    if (ws == null) {
+      final titles = _spreadsheet!.sheets.map((s) => s.title).toList();
+      throw Exception('Sheet "$sheetTabName" not found. Available: ${titles.join(", ")}');
+    }
+
+    // Read all rows from column A
+    final all = await ws.values.allRows();
+    if (all.isEmpty) throw Exception('Sheet "$sheetTabName" is empty');
+
+    // Find header row: first row that contains 'السؤال'
+    int headerRowIdx = -1;
+    final colIdx = <String, int>{};
+    for (int i = 0; i < all.length && i < 20; i++) {
+      final row = all[i];
+      if (row.any((c) => c.trim() == 'السؤال')) {
+        headerRowIdx = i;
+        for (int j = 0; j < row.length; j++) {
+          final h = row[j].trim();
+          if (h.isNotEmpty) colIdx[h] = j;
+        }
+        break;
+      }
+    }
+    if (headerRowIdx == -1) {
+      final sample = all.take(10).map((r) => r.join('|')).join(' // ');
+      throw Exception('Header row not found in "$sheetTabName". First 10 rows: $sample');
+    }
+
+    // Fetch hyperlinks for ALL cells (media URLs stored via "Insert Link")
+    final allHyperlinks = await _fetchAllHyperlinksForSheet(sheetTabName);
+
+    // Build subcategory code → Firestore ID map
+    final subCodeToId = {for (final s in subCategories) s.code: s.id};
+
+    // Detect columns by header keywords
+    final questionColIdx = colIdx['السؤال'];
+    final subCodeColIdx = colIdx['كود الصنف'];
+    final pointsColIdx = colIdx['مستوى الصعوبة'];
+
+    int? answerColIdx;
+    int? qMediaColIdx;
+    int? aMediaColIdx;
+    for (final entry in colIdx.entries) {
+      final h = entry.key;
+      final ci = entry.value;
+      final isAnswerRelated = h.contains('إجابة') || h.contains('جواب');
+      final isMediaRelated = h.contains('صورة') || h.contains('رابط') ||
+          h.contains('مرفق') || h.contains('ميديا') || h.contains('media') ||
+          h.contains('image') || h.contains('link');
+
+      if (answerColIdx == null && isAnswerRelated && !isMediaRelated) {
+        answerColIdx = ci;
+      } else if (qMediaColIdx == null && isMediaRelated && !isAnswerRelated) {
+        qMediaColIdx = ci;
+      } else if (aMediaColIdx == null && isMediaRelated && isAnswerRelated) {
+        aMediaColIdx = ci;
+      }
+    }
+
+    if (questionColIdx == null || subCodeColIdx == null) {
+      throw Exception(
+          'Required columns "السؤال" / "كود الصنف" not found. Detected: ${colIdx.keys.join(", ")}');
+    }
+
+    // Parse data rows
+    final questionsData = <Map<String, dynamic>>[];
+    final affectedSubIds = <String>{};
+
+    for (int ri = headerRowIdx + 1; ri < all.length; ri++) {
+      final row = all[ri];
+      if (row.isEmpty) continue;
+
+      final subCode = (subCodeColIdx < row.length ? row[subCodeColIdx] : '').trim();
+      if (subCode.isEmpty) continue;
+      final subId = subCodeToId[subCode];
+      if (subId == null) continue;
+
+      final qText = (questionColIdx < row.length ? row[questionColIdx] : '').trim();
+      if (qText.isEmpty) continue;
+
+      final aText = answerColIdx != null && answerColIdx < row.length
+          ? row[answerColIdx].trim()
+          : '';
+
+      int pts = 200;
+      if (pointsColIdx != null && pointsColIdx < row.length) {
+        pts = int.tryParse(row[pointsColIdx].trim()) ?? 200;
+      }
+
+      // Media URLs: hyperlink first, then HYPERLINK formula, then raw URL
+      String qMedia = '';
+      if (qMediaColIdx != null) {
+        qMedia = allHyperlinks[ri]?[qMediaColIdx] ?? '';
+        if (qMedia.isEmpty && qMediaColIdx < row.length) {
+          qMedia = _extractUrl(row[qMediaColIdx]);
+        }
+      }
+
+      String aMedia = '';
+      if (aMediaColIdx != null) {
+        aMedia = allHyperlinks[ri]?[aMediaColIdx] ?? '';
+        if (aMedia.isEmpty && aMediaColIdx < row.length) {
+          aMedia = _extractUrl(row[aMediaColIdx]);
+        }
+      }
+
+      affectedSubIds.add(subId);
+      questionsData.add({
+        'sub_category_id': subId,
+        'question_text_ar': qText,
+        'answer_text_ar': aText,
+        if (qMedia.isNotEmpty) 'question_media_url': qMedia,
+        if (aMedia.isNotEmpty) 'answer_media_url': aMedia,
+        'points': pts,
+        'status': 'active',
+      });
+    }
+
+    // Delete existing questions for affected subcategories
+    for (final subId in affectedSubIds) {
+      await firestoreService.deleteQuestionsForSubCategory(subId);
+    }
+
+    // Batch write new questions
+    await firestoreService.batchCreateQuestions(questionsData);
+    return questionsData.length;
+  }
 }

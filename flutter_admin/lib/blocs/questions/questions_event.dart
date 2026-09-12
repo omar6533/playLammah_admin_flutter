@@ -44,3 +44,12 @@ class ToggleQuestionStatus extends QuestionsEvent {
   @override
   List<Object?> get props => [id, isActive];
 }
+
+class DeleteQuestion extends QuestionsEvent {
+  final String id;
+
+  const DeleteQuestion(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}

@@ -12,6 +12,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
     on<CreateUser>(_onCreateUser);
     on<UpdateUser>(_onUpdateUser);
     on<DeleteUser>(_onDeleteUser);
+    on<UpdateUserBalance>(_onUpdateUserBalance);
   }
 
   Future<void> _onLoadUsers(LoadUsers event, Emitter<UsersState> emit) async {
@@ -46,6 +47,14 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UsersState> emit) async {
     try {
       await _firestoreService.deleteUser(event.id);
+    } catch (e) {
+      emit(UsersError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateUserBalance(UpdateUserBalance event, Emitter<UsersState> emit) async {
+    try {
+      await _firestoreService.updateUserBalance(event.id, event.availableGames);
     } catch (e) {
       emit(UsersError(e.toString()));
     }

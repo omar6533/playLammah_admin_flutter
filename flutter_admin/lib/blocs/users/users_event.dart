@@ -30,3 +30,11 @@ class DeleteUser extends UsersEvent {
   @override
   List<Object?> get props => [id];
 }
+
+class UpdateUserBalance extends UsersEvent {
+  final String id;
+  final int availableGames;
+  const UpdateUserBalance(this.id, this.availableGames);
+  @override
+  List<Object?> get props => [id, availableGames];
+}

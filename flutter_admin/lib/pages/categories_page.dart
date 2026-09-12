@@ -12,7 +12,6 @@ import '../models/main_category_model.dart';
 import '../models/sub_category_model.dart';
 import '../services/firestore_service.dart';
 import '../services/google_sheets_service.dart';
-import '../services/excel_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/loading_overlay.dart';
@@ -29,13 +28,11 @@ class CategoriesPage extends StatefulWidget {
 class _CategoriesPageState extends State<CategoriesPage>
     with SingleTickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
-  final ExcelService _excelService = ExcelService();
   final GoogleSheetsService _sheetsService = GoogleSheetsService();
 
   late TabController _tabController;
   String? _selectedMainCategoryId;
   bool _uploading = false;
-  bool _importing = false;
   bool _syncing = false;
   bool _deletingAll = false;
   // Prevents auto-sync to sheet while a sheet→Firestore sync is in progress
@@ -44,6 +41,7 @@ class _CategoriesPageState extends State<CategoriesPage>
   static const int _rowsPerPage = 15;
   int _mainPage = 0;
   int _subPage = 0;
+  int _totalSubCatCount = 0;
 
   @override
   void initState() {
@@ -387,133 +385,6 @@ class _CategoriesPageState extends State<CategoriesPage>
     html.window.open(kSpreadsheetExportUrl, '_blank');
   }
 
-  // ── Template ─────────────────────────────────────────────────────────────
-
-  void _handleTemplate() {
-    _excelService.downloadTemplate(
-        _isMainTab ? 'main-categories' : 'sub-categories');
-  }
-
-  // ── Import from Excel file ───────────────────────────────────────────────
-
-  Future<void> _handleImport(
-    List<MainCategoryModel> mainCats,
-    List<SubCategoryModel> subCats,
-  ) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx', 'xls'],
-      allowMultiple: false,
-    );
-    if (result == null || result.files.isEmpty) return;
-
-    setState(() => _importing = true);
-
-    try {
-      final rows =
-          await _excelService.parseExcelFile(result.files.first.bytes!);
-
-      int created = 0, skipped = 0, errors = 0;
-      final errorList = <String>[];
-      // Capture bloc before async gap
-      final bloc = context.read<CategoriesBloc>(); // ignore: use_build_context_synchronously
-
-      if (_isMainTab) {
-        // Expected columns: code, name_ar, display_order, is_active
-        for (final row in rows) {
-          try {
-            final code = (row['code'] ?? row['كود الفئة'] ?? '').toString().trim().toUpperCase();
-            final name = (row['name_ar'] ?? row['اسم الفئة'] ?? '').toString().trim();
-            if (code.isEmpty || name.isEmpty) { skipped++; continue; }
-            if (mainCats.any((c) => c.code == code)) { skipped++; continue; }
-
-            await _firestoreService.createMainCategory({
-              'code': code,
-              'name_ar': name,
-              'display_order': int.tryParse(row['display_order']?.toString() ?? '') ?? mainCats.length,
-              'is_active': true,
-              'status': 'active',
-            });
-            created++;
-          } catch (e) {
-            errors++;
-            errorList.add('Row error: $e');
-          }
-        }
-      } else {
-        // Expected columns: main_category_code, code, name_ar, display_order, media_url
-        for (final row in rows) {
-          try {
-            final mainCode = (row['main_category_code'] ?? row['كود الفئة'] ?? '').toString().trim().toUpperCase();
-            final code = (row['code'] ?? row['كود الصنف'] ?? '').toString().trim().toUpperCase();
-            final name = (row['name_ar'] ?? row['اسم الصنف'] ?? '').toString().trim();
-            if (code.isEmpty || name.isEmpty) { skipped++; continue; }
-
-            final mainCat = mainCats.where((c) => c.code == mainCode).firstOrNull;
-            if (mainCat == null) {
-              errors++;
-              errorList.add('Main category not found for code: $mainCode');
-              continue;
-            }
-            if (subCats.any((s) => s.code == code)) { skipped++; continue; }
-
-            final mediaUrl = (row['media_url'] ?? '').toString().trim();
-            if (mediaUrl.isEmpty) {
-              errors++;
-              errorList.add('Media required for: $name');
-              continue;
-            }
-
-            await _firestoreService.createSubCategory({
-              'code': code,
-              'main_category_id': mainCat.id,
-              'name_ar': name,
-              'display_order': int.tryParse(row['display_order']?.toString() ?? '') ?? 0,
-              'is_active': true,
-              'media_url': mediaUrl,
-            });
-            created++;
-          } catch (e) {
-            errors++;
-            errorList.add('Row error: $e');
-          }
-        }
-      }
-
-      bloc.add(const LoadCategories());
-
-      // Sync updated categories back to Google Sheet
-      await _syncToSheet();
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Import Complete'),
-            content: Text(
-              'Created: $created\nSkipped (duplicates): $skipped\nErrors: $errors'
-              '${errorList.isNotEmpty ? '\n\nErrors:\n${errorList.take(5).join('\n')}' : ''}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _importing = false);
-    }
-  }
-
   // ── Sync Now: Google Sheet → Firestore ───────────────────────────────────
 
   Future<void> _syncFromSheet() async {
@@ -724,12 +595,15 @@ class _CategoriesPageState extends State<CategoriesPage>
         if (state is CategoriesLoaded) {
           mainCats = state.mainCategories;
           subCats = state.subCategories;
+          if (_selectedMainCategoryId == null) {
+            _totalSubCatCount = subCats.length;
+          }
         }
 
         return Scaffold(
           backgroundColor: AppColors.background,
           body: LoadingOverlay(
-            isLoading: isLoading || _importing || _syncing,
+            isLoading: isLoading || _syncing,
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -777,15 +651,6 @@ class _CategoriesPageState extends State<CategoriesPage>
                         spacing: 10,
                         children: [
                           OutlinedButton.icon(
-                            icon: const Icon(Icons.download_outlined,
-                                size: 16),
-                            label: const Text('Template'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textSecondary,
-                            ),
-                            onPressed: _handleTemplate,
-                          ),
-                          OutlinedButton.icon(
                             icon: const Icon(Icons.table_chart_outlined,
                                 size: 16),
                             label: const Text('Export Sheet'),
@@ -797,33 +662,6 @@ class _CategoriesPageState extends State<CategoriesPage>
                             onPressed: _handleExport,
                           ),
                           OutlinedButton.icon(
-                            icon: const Icon(Icons.bug_report_outlined, size: 16),
-                            label: const Text('Debug Sheet'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                              side: const BorderSide(color: Colors.orange),
-                            ),
-                            onPressed: () async {
-                              // Show which rows actually have image/description data
-                              final result = await _sheetsService.debugFindImageRows();
-                              if (mounted) {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Image Rows Debug'),
-                                    content: SingleChildScrollView(
-                                      child: SelectableText(
-                                        result,
-                                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                                      ),
-                                    ),
-                                    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          OutlinedButton.icon(
                             icon: const Icon(Icons.sync_rounded, size: 16),
                             label: const Text('Sync Now'),
                             style: OutlinedButton.styleFrom(
@@ -832,16 +670,6 @@ class _CategoriesPageState extends State<CategoriesPage>
                                   color: AppColors.success),
                             ),
                             onPressed: _syncing ? null : _syncFromSheet,
-                          ),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.upload, size: 16),
-                            label: const Text('Import Excel'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () =>
-                                _handleImport(mainCats, subCats),
                           ),
                           OutlinedButton.icon(
                             icon: _deletingAll
@@ -914,7 +742,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                                     const Icon(Icons.folder_open),
                                     const SizedBox(width: 8),
                                     Text(
-                                        'Sub Categories (${subCats.length})'),
+                                        'Sub Categories ($_totalSubCatCount)'),
                                   ],
                                 ),
                               ),

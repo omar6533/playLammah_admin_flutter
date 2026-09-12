@@ -4,57 +4,57 @@ class UserModel {
   final String id;
   final String email;
   final String name;
-  final String role;
-  final bool isActive;
-  final DateTime createdAt;
-  final int gamesPlayed;
-  final int totalWinnings;
+  final String mobile;
+  final int trialsRemaining;
+  final int availableGames;
+  final String createdAt;
 
   UserModel({
     required this.id,
     required this.email,
     required this.name,
-    required this.role,
-    required this.isActive,
+    required this.mobile,
+    required this.trialsRemaining,
+    required this.availableGames,
     required this.createdAt,
-    this.gamesPlayed = 0,
-    this.totalWinnings = 0,
   });
+
+  int get totalBalance => trialsRemaining + availableGames;
 
   factory UserModel.fromFirestore(Map<String, dynamic> data, String id) {
     return UserModel(
       id: id,
-      email: data['email'] ?? '',
-      name: data['name'] ?? '',
-      role: data['role'] ?? 'user',
-      isActive: data['isActive'] ?? true,
-      createdAt: data['createdAt'] is Timestamp
-          ? (data['createdAt'] as Timestamp).toDate()
-          : data['createdAt'] != null
-              ? DateTime.parse(data['createdAt'].toString())
-              : DateTime.now(),
-      gamesPlayed: (data['gamesPlayed'] is int)
-          ? data['gamesPlayed']
-          : (data['gamesPlayed'] is num)
-              ? data['gamesPlayed'].toInt()
-              : 0,
-      totalWinnings: (data['totalWinnings'] is int)
-          ? data['totalWinnings']
-          : (data['totalWinnings'] is num)
-              ? data['totalWinnings'].toInt()
-              : 0,
+      email: data['email'] as String? ?? '',
+      name: data['name'] as String? ?? '',
+      mobile: data['mobile'] as String? ?? '',
+      trialsRemaining: _toInt(data['trials_remaining']),
+      availableGames: _toInt(data['available_games']),
+      createdAt: _toDateString(data['created_at'] ?? data['createdAt']),
     );
+  }
+
+  static String _toDateString(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is Timestamp) return v.toDate().toIso8601String();
+    return v.toString();
+  }
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'email': email,
       'name': name,
-      'role': role,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
-      'gamesPlayed': gamesPlayed,
-      'totalWinnings': totalWinnings,
+      'mobile': mobile,
+      'trials_remaining': trialsRemaining,
+      'available_games': availableGames,
+      'created_at': createdAt,
     };
   }
 }

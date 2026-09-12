@@ -3,16 +3,38 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_event.dart';
+import '../blocs/auth/auth_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/sidebar.dart';
 import '../router/app_router.dart';
 
 @RoutePage()
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _initialTabSet = false;
+
+  int _initialIndexForRole(String role) {
+    switch (role) {
+      case 'cms_manager':
+        return 1; // Categories
+      case 'admin':
+      default:
+        return 0; // Dashboard
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final role = context.select<AuthBloc, String>((bloc) {
+      final s = bloc.state;
+      return s is AuthAuthenticated ? s.role : 'admin';
+    });
     return AutoTabsRouter(
       routes: const [
         DashboardRoute(),
@@ -23,17 +45,25 @@ class HomePage extends StatelessWidget {
         PaymentsRoute(),
         SettingsRoute(),
       ],
+      homeIndex: _initialIndexForRole(role),
       transitionBuilder: (context, child, animation) => FadeTransition(
         opacity: animation,
         child: child,
       ),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
+        if (!_initialTabSet) {
+          _initialTabSet = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) tabsRouter.setActiveIndex(_initialIndexForRole(role));
+          });
+        }
         return Scaffold(
           body: Row(
             children: [
               Sidebar(
                 currentPage: _getCurrentPageName(tabsRouter.activeIndex),
+                role: role,
                 onPageChange: (page) {
                   final index = _getIndexForPage(page);
                   tabsRouter.setActiveIndex(index);

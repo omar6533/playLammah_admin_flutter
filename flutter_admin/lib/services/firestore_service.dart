@@ -13,21 +13,28 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Stream<List<UserModel>> getUsers() {
-    return _db.collection('users').snapshots().map((snapshot) => snapshot.docs
-        .map((doc) => UserModel.fromFirestore(doc.data(), doc.id))
-        .toList());
+    return _db.collection('user_profiles').snapshots().map((snapshot) =>
+        snapshot.docs
+            .map((doc) => UserModel.fromFirestore(doc.data(), doc.id))
+            .toList());
   }
 
   Future<void> addUser(UserModel user) async {
-    await _db.collection('users').add(user.toFirestore());
+    await _db.collection('user_profiles').add(user.toFirestore());
   }
 
   Future<void> updateUser(String id, UserModel user) async {
-    await _db.collection('users').doc(id).update(user.toFirestore());
+    await _db.collection('user_profiles').doc(id).update(user.toFirestore());
+  }
+
+  Future<void> updateUserBalance(String id, int availableGames) async {
+    await _db.collection('user_profiles').doc(id).update({
+      'available_games': availableGames,
+    });
   }
 
   Future<void> deleteUser(String id) async {
-    await _db.collection('users').doc(id).delete();
+    await _db.collection('user_profiles').doc(id).delete();
   }
 
   Stream<List<CategoryModel>> getCategories() {
@@ -266,6 +273,46 @@ class FirestoreService {
 
   Future<void> deleteQuestion(String id) async {
     await _db.collection('questions').doc(id).delete();
+  }
+
+  Future<void> deleteQuestionsForSubCategory(String subCategoryId) async {
+    final snapshot = await _db.collection('questions')
+        .where('sub_category_id', isEqualTo: subCategoryId)
+        .get();
+    if (snapshot.docs.isEmpty) return;
+    final batch = _db.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
+
+  Future<void> deleteAllQuestions() async {
+    const batchSize = 400;
+    final snapshot = await _db.collection('questions').get();
+    for (int i = 0; i < snapshot.docs.length; i += batchSize) {
+      final batch = _db.batch();
+      for (final doc in snapshot.docs.skip(i).take(batchSize)) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<void> batchCreateQuestions(List<Map<String, dynamic>> questions) async {
+    const batchSize = 400;
+    for (int i = 0; i < questions.length; i += batchSize) {
+      final batch = _db.batch();
+      for (final q in questions.skip(i).take(batchSize)) {
+        final ref = _db.collection('questions').doc();
+        batch.set(ref, {
+          ...q,
+          'created_at': FieldValue.serverTimestamp(),
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
   }
 
   Future<Map<String, dynamic>> getDashboardStats() async {

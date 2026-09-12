@@ -4,22 +4,28 @@ import '../theme/app_colors.dart';
 class Sidebar extends StatelessWidget {
   final String currentPage;
   final Function(String) onPageChange;
+  final String role;
 
   const Sidebar({
     required this.currentPage,
     required this.onPageChange,
+    required this.role,
     super.key,
   });
 
-  static const _items = [
-    (icon: Icons.dashboard_rounded, label: 'Dashboard', page: 'dashboard'),
-    (icon: Icons.people_rounded, label: 'Customers', page: 'users'),
-    (icon: Icons.gamepad_rounded, label: 'Games', page: 'games'),
-    (icon: Icons.category_rounded, label: 'Categories', page: 'categories'),
-    (icon: Icons.quiz_rounded, label: 'Questions', page: 'questions'),
-    (icon: Icons.payment_rounded, label: 'Payments', page: 'payments'),
-    (icon: Icons.settings_rounded, label: 'Settings', page: 'settings'),
+  static final _allItems = [
+    (icon: Icons.dashboard_rounded, label: 'Dashboard', page: 'dashboard', roles: const ['admin']),
+    (icon: Icons.people_rounded, label: 'Customers', page: 'users', roles: const ['admin']),
+    (icon: Icons.gamepad_rounded, label: 'Games', page: 'games', roles: const ['admin']),
+    (icon: Icons.category_rounded, label: 'Categories', page: 'categories', roles: const ['admin', 'cms_manager']),
+    (icon: Icons.quiz_rounded, label: 'Questions', page: 'questions', roles: const ['admin', 'cms_manager']),
+    (icon: Icons.payment_rounded, label: 'Payments', page: 'payments', roles: const ['admin']),
+    (icon: Icons.settings_rounded, label: 'Settings', page: 'settings', roles: const ['admin']),
   ];
+
+  List<({IconData icon, String label, String page, List<String> roles})> get _visibleItems {
+    return _allItems.where((item) => item.roles.contains(role)).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +83,7 @@ class Sidebar extends StatelessWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              children: _items
+              children: _visibleItems
                   .map((item) => _NavItem(
                         icon: item.icon,
                         label: item.label,

@@ -31,10 +31,27 @@ class AuthService {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
+  // Returns the role of the given uid from admin_portal_users.
+  // If no record exists (first-ever admin login), bootstraps a record with role='admin'.
+  Future<String> getOrInitUserRole(String uid, String email) async {
+    final doc = await _db.collection('admin_portal_users').doc(uid).get();
+    if (!doc.exists || doc.data()?['role'] == null) {
+      await _db.collection('admin_portal_users').doc(uid).set({
+        'uid': uid,
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': 'system',
+        'role': 'admin',
+      }, SetOptions(merge: true));
+      return 'admin';
+    }
+    return (doc.data()!['role'] as String?) ?? 'admin';
+  }
+
   // Creates a new admin portal user without touching the current admin session.
   // Uses a uniquely-named secondary Firebase App to avoid DuplicateApp errors.
   // Saves user record to Firestore so we can list them later.
-  Future<void> createAdminUser(String email, String password) async {
+  Future<void> createAdminUser(String email, String password, String role) async {
     final appName = '_admin_create_${DateTime.now().millisecondsSinceEpoch}';
     FirebaseApp? secondary;
     String? newUid;
@@ -62,6 +79,7 @@ class AuthService {
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': _auth.currentUser?.email ?? '',
+        'role': role,
       });
     }
   }

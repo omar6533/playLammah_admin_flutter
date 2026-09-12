@@ -1,10 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/auth_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
 
   AuthBloc() : super(AuthInitial()) {
     on<CheckAuthStatus>(_onCheckAuthStatus);
@@ -19,7 +21,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        emit(AuthAuthenticated(user));
+        final role = await _authService.getOrInitUserRole(user.uid, user.email ?? '');
+        emit(AuthAuthenticated(user, role));
       } else {
         emit(AuthUnauthenticated());
       }
@@ -40,7 +43,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       final user = _auth.currentUser;
       if (user != null) {
-        emit(AuthAuthenticated(user));
+        final role = await _authService.getOrInitUserRole(user.uid, user.email ?? '');
+        emit(AuthAuthenticated(user, role));
       } else {
         emit(const AuthError('Authentication failed: User is null'));
       }

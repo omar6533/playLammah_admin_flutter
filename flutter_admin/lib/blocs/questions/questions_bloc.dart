@@ -11,6 +11,7 @@ class QuestionsBloc extends Bloc<QuestionsEvent, QuestionsState> {
     on<CreateQuestion>(_onCreateQuestion);
     on<UpdateQuestion>(_onUpdateQuestion);
     on<ToggleQuestionStatus>(_onToggleQuestionStatus);
+    on<DeleteQuestion>(_onDeleteQuestion);
   }
 
   Future<void> _onLoadQuestions(
@@ -73,6 +74,19 @@ class QuestionsBloc extends Bloc<QuestionsEvent, QuestionsState> {
       await _firestoreService.updateQuestion(event.id, {
         'status': event.isActive ? 'active' : 'disabled',
       });
+      add(LoadQuestions());
+    } catch (e) {
+      emit(QuestionsError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteQuestion(
+    DeleteQuestion event,
+    Emitter<QuestionsState> emit,
+  ) async {
+    emit(QuestionsLoading());
+    try {
+      await _firestoreService.deleteQuestion(event.id);
       add(LoadQuestions());
     } catch (e) {
       emit(QuestionsError(e.toString()));

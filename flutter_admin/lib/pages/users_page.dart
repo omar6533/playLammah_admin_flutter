@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/user_model.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_data_table.dart';
-import '../widgets/custom_text_field.dart';
+import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_overlay.dart';
 import '../blocs/users/users_bloc.dart';
 import '../blocs/users/users_event.dart';
 import '../blocs/users/users_state.dart';
-import 'package:intl/intl.dart';
 
 @RoutePage()
 class UsersPage extends StatefulWidget {
@@ -21,117 +18,117 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _roleController = TextEditingController();
-  UserModel? _editingUser;
+  String _search = '';
 
   @override
   void initState() {
     super.initState();
-    // Load users on init
     context.read<UsersBloc>().add(LoadUsers());
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _nameController.dispose();
-    _roleController.dispose();
-    super.dispose();
-  }
-
-  void _showUserDialog(BuildContext context, [UserModel? user]) {
-    _editingUser = user;
-    if (user != null) {
-      _emailController.text = user.email;
-      _nameController.text = user.name;
-      _roleController.text = user.role;
-    } else {
-      _emailController.clear();
-      _nameController.clear();
-      _roleController.text = 'user';
-    }
+  void _showEditBalanceDialog(BuildContext context, UserModel user) {
+    final ctrl = TextEditingController(text: user.availableGames.toString());
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(user == null ? 'Add User' : 'Edit User'),
-        content: Form(
-          key: _formKey,
-          child: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomTextField(
-                  label: 'Email',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Name',
-                  controller: _nameController,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Role',
-                  controller: _roleController,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter role';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            const Icon(Icons.account_balance_wallet_rounded,
+                color: AppColors.primary, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                user.name.isEmpty ? user.email : user.name,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Current balance',
+                        style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${user.totalBalance} games',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primary),
+                    ),
+                    Text(
+                      '${user.trialsRemaining} free trials  +  ${user.availableGames} paid',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: ctrl,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'New paid balance',
+                  hintText: '0',
+                  suffixText: 'games',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (int.tryParse(v) == null) return 'Must be a whole number';
+                  if (int.parse(v) < 0) return 'Cannot be negative';
+                  return null;
+                },
+              ),
+            ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
-          CustomButton(
-            text: 'Save',
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final userModel = UserModel(
-                  id: _editingUser?.id ?? '',
-                  email: _emailController.text,
-                  name: _nameController.text,
-                  role: _roleController.text,
-                  isActive: _editingUser?.isActive ?? true,
-                  createdAt: _editingUser?.createdAt ?? DateTime.now(),
-                  gamesPlayed: _editingUser?.gamesPlayed ?? 0,
-                  totalWinnings: _editingUser?.totalWinnings ?? 0,
-                );
-
-                final bloc = context.read<UsersBloc>();
-                if (_editingUser == null) {
-                  bloc.add(CreateUser(userModel));
-                } else {
-                  bloc.add(UpdateUser(userModel));
-                }
-
-                Navigator.pop(dialogContext);
-              }
+              if (!formKey.currentState!.validate()) return;
+              context.read<UsersBloc>().add(
+                    UpdateUserBalance(user.id, int.parse(ctrl.text)),
+                  );
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Balance updated'),
+                  backgroundColor: AppColors.success,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             },
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -144,17 +141,26 @@ class _UsersPageState extends State<UsersPage> {
       listener: (context, state) {
         if (state is UsersError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${state.message}')),
+            SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: AppColors.danger,
+            ),
           );
         }
       },
       builder: (context, state) {
         List<UserModel> users = [];
         bool isLoading = state is UsersLoading;
+        if (state is UsersLoaded) users = state.users;
 
-        if (state is UsersLoaded) {
-          users = state.users;
-        }
+        final filtered = _search.isEmpty
+            ? users
+            : users
+                .where((u) =>
+                    u.name.toLowerCase().contains(_search.toLowerCase()) ||
+                    u.email.toLowerCase().contains(_search.toLowerCase()) ||
+                    u.mobile.contains(_search))
+                .toList();
 
         return Scaffold(
           backgroundColor: const Color(0xFFF3F4F6),
@@ -165,28 +171,47 @@ class _UsersPageState extends State<UsersPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       const Text(
-                        'Users',
+                        'Customers',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF111827),
                         ),
                       ),
-                      CustomButton(
-                        text: 'Add User',
-                        icon: Icons.add,
-                        onPressed: () => _showUserDialog(context),
+                      SizedBox(
+                        width: 280,
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search name, email or mobile…',
+                            prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: (v) => setState(() => _search = v),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: _buildContent(context, state, users),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${filtered.length} customer${filtered.length == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary),
                   ),
+                  const SizedBox(height: 16),
+                  Expanded(child: _buildContent(context, state, filtered)),
                 ],
               ),
             ),
@@ -209,78 +234,113 @@ class _UsersPageState extends State<UsersPage> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
-              'Error: ${state.message}',
-              style: const TextStyle(color: Colors.red),
-            ),
+            Text('Error: ${state.message}',
+                style: const TextStyle(color: Colors.red)),
           ],
         ),
       );
     }
 
     if (users.isEmpty) {
-      return EmptyState(
+      return const EmptyState(
         icon: Icons.people_outline,
-        title: 'No Users',
-        message: 'Get started by adding your first user.',
-        action: CustomButton(
-          text: 'Add User',
-          icon: Icons.add,
-          onPressed: () => _showUserDialog(context),
-        ),
+        title: 'No Customers',
+        message: 'Registered customers will appear here.',
       );
     }
 
-    final rows = users.map((user) {
-      return [
-        user.name,
-        user.email,
-        user.role,
-        user.gamesPlayed.toString(),
-        '\$${user.totalWinnings.toStringAsFixed(2)}',
-        user.isActive ? 'Active' : 'Inactive',
-        DateFormat('MMM dd, yyyy').format(user.createdAt),
-      ];
-    }).toList();
-
-    return CustomDataTable(
-      columns: const [
-        'Name',
-        'Email',
-        'Role',
-        'Games Played',
-        'Winnings',
-        'Status',
-        'Created At'
-      ],
-      rows: rows,
-      onEdit: (index) => _showUserDialog(context, users[index]),
-      onDelete: (index) async {
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete User'),
-            content: const Text('Are you sure you want to delete this user?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child:
-                    const Text('Delete', style: TextStyle(color: Colors.red)),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        );
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor:
+                  WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+              dataRowMinHeight: 52,
+              dataRowMaxHeight: 52,
+              columnSpacing: 24,
+              columns: const [
+                DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Mobile', style: TextStyle(fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Free Trials', style: TextStyle(fontWeight: FontWeight.w600)), numeric: true),
+                DataColumn(label: Text('Game Balance', style: TextStyle(fontWeight: FontWeight.w600)), numeric: true),
+                DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w600))),
+              ],
+              rows: users.map((user) {
+                return DataRow(cells: [
+                  DataCell(Text(
+                    user.name.isEmpty ? '—' : user.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  )),
+                  DataCell(Text(user.email,
+                      style: const TextStyle(fontSize: 13))),
+                  DataCell(Text(user.mobile.isEmpty ? '—' : user.mobile,
+                      style: const TextStyle(fontSize: 13))),
+                  DataCell(_balanceChip(user.trialsRemaining, AppColors.textSecondary)),
+                  DataCell(_balanceChip(user.totalBalance,
+                      user.totalBalance > 0 ? AppColors.success : AppColors.danger)),
+                  DataCell(
+                    FilledButton.tonal(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryLight,
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: () => _showEditBalanceDialog(context, user),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_rounded, size: 14),
+                          SizedBox(width: 4),
+                          Text('Edit Balance',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ]);
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-        if (confirm == true) {
-          if (context.mounted) {
-            context.read<UsersBloc>().add(DeleteUser(users[index].id));
-          }
-        }
-      },
+  Widget _balanceChip(int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$value',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }
