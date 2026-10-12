@@ -34,7 +34,6 @@ class _CategoriesPageState extends State<CategoriesPage>
   String? _selectedMainCategoryId;
   bool _uploading = false;
   bool _syncing = false;
-  bool _deletingAll = false;
   // Prevents auto-sync to sheet while a sheet→Firestore sync is in progress
   bool _syncingFromSheet = false;
 
@@ -447,118 +446,6 @@ class _CategoriesPageState extends State<CategoriesPage>
     }
   }
 
-  // ── Delete All ────────────────────────────────────────────────────────────
-
-  Future<void> _handleDeleteAll(
-    List<MainCategoryModel> mainCats,
-    List<SubCategoryModel> subCats,
-  ) async {
-    final isMain = _isMainTab;
-    final label = isMain ? 'main categories' : 'sub categories';
-    final count = isMain ? mainCats.length : subCats.length;
-    if (count == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No $label to delete.')),
-      );
-      return;
-    }
-
-    // Double-confirm: type DELETE to proceed
-    final confirmCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setDs) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: Colors.red, size: 24),
-              const SizedBox(width: 8),
-              Text('Delete All ${isMain ? 'Main' : 'Sub'} Categories'),
-            ],
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This will permanently delete all $count $label from Firestore. '
-                  'This cannot be undone.',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Type DELETE to confirm:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: confirmCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'DELETE',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  onChanged: (_) => setDs(() {}),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white),
-              onPressed: confirmCtrl.text == 'DELETE'
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              child: const Text('Delete All'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() => _deletingAll = true);
-    try {
-      int deleted;
-      if (isMain) {
-        deleted = await _firestoreService.deleteAllMainCategories();
-      } else {
-        deleted = await _firestoreService.deleteAllSubCategories();
-      }
-      if (mounted) {
-        context.read<CategoriesBloc>().add(const LoadCategories());
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Deleted $deleted $label.'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Delete all failed: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _deletingAll = false);
-    }
-  }
-
   String _formatDate(DateTime date) =>
       DateFormat('MMM dd, yyyy').format(date);
 
@@ -670,28 +557,6 @@ class _CategoriesPageState extends State<CategoriesPage>
                                   color: AppColors.success),
                             ),
                             onPressed: _syncing ? null : _syncFromSheet,
-                          ),
-                          OutlinedButton.icon(
-                            icon: _deletingAll
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.red),
-                                  )
-                                : const Icon(Icons.delete_sweep_outlined,
-                                    size: 16),
-                            label: Text(_isMainTab
-                                ? 'Delete All Main'
-                                : 'Delete All Sub'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                            ),
-                            onPressed: (_deletingAll || _syncing)
-                                ? null
-                                : () => _handleDeleteAll(mainCats, subCats),
                           ),
                           CustomButton(
                             text: _isMainTab

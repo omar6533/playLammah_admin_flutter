@@ -754,63 +754,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
   }
 
-  Future<void> _deleteAllQuestions() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_rounded, color: AppColors.danger, size: 22),
-            SizedBox(width: 10),
-            Text('Delete All Questions',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          ],
-        ),
-        content: const Text(
-          'This will permanently delete ALL questions from the database. This cannot be undone.',
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete All'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    setState(() => _syncing = true);
-    try {
-      await _firestoreService.deleteAllQuestions();
-      _loadQuestions();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('All questions deleted'),
-          backgroundColor: AppColors.danger,
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Delete failed: $e'),
-          backgroundColor: AppColors.danger,
-        ));
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
   void _showSyncDialog(BuildContext context, List<SubCategoryModel> subCats) {
     showDialog(
       context: context,
@@ -900,18 +843,6 @@ class _QuestionsPageState extends State<QuestionsPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: _syncing ? null : () => _showSyncDialog(context, subCats),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-              label: const Text('Delete All'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.danger,
-                side: const BorderSide(color: AppColors.danger),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: _syncing ? null : _deleteAllQuestions,
             ),
             const SizedBox(width: 12),
             CustomButton(
