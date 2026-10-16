@@ -107,6 +107,38 @@ class PaymentsRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [PackagesPage]
+class PackagesRoute extends PageRouteInfo<void> {
+  const PackagesRoute({List<PageRouteInfo>? children})
+    : super(PackagesRoute.name, initialChildren: children);
+
+  static const String name = 'PackagesRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PackagesPage();
+    },
+  );
+}
+
+/// generated route for
+/// [PromoCodesPage]
+class PromoCodesRoute extends PageRouteInfo<void> {
+  const PromoCodesRoute({List<PageRouteInfo>? children})
+    : super(PromoCodesRoute.name, initialChildren: children);
+
+  static const String name = 'PromoCodesRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PromoCodesPage();
+    },
+  );
+}
+
+/// generated route for
 /// [QuestionsPage]
 class QuestionsRoute extends PageRouteInfo<void> {
   const QuestionsRoute({List<PageRouteInfo>? children})

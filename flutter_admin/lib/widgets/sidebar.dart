@@ -20,6 +20,8 @@ class Sidebar extends StatelessWidget {
     (icon: Icons.category_rounded, label: 'Categories', page: 'categories', roles: const ['admin', 'cms_manager']),
     (icon: Icons.quiz_rounded, label: 'Questions', page: 'questions', roles: const ['admin', 'cms_manager']),
     (icon: Icons.payment_rounded, label: 'Payments', page: 'payments', roles: const ['admin']),
+    (icon: Icons.inventory_2_rounded, label: 'Packages', page: 'packages', roles: const ['admin']),
+    (icon: Icons.local_offer_rounded, label: 'Promo Codes', page: 'promo_codes', roles: const ['admin']),
     (icon: Icons.settings_rounded, label: 'Settings', page: 'settings', roles: const ['admin']),
   ];
 

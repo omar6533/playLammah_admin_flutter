@@ -44,6 +44,8 @@ class _HomePageState extends State<HomePage> {
         GamesRoute(),
         PaymentsRoute(),
         SettingsRoute(),
+        PackagesRoute(),
+        PromoCodesRoute(),
       ],
       homeIndex: _initialIndexForRole(role),
       transitionBuilder: (context, child, animation) => FadeTransition(
@@ -131,6 +133,10 @@ class _HomePageState extends State<HomePage> {
         return 'payments';
       case 6:
         return 'settings';
+      case 7:
+        return 'packages';
+      case 8:
+        return 'promo_codes';
       default:
         return 'dashboard';
     }
@@ -152,6 +158,10 @@ class _HomePageState extends State<HomePage> {
         return 5;
       case 'settings':
         return 6;
+      case 'packages':
+        return 7;
+      case 'promo_codes':
+        return 8;
       default:
         return 0;
     }

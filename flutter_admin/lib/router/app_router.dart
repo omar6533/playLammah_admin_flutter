@@ -8,6 +8,8 @@ import '../pages/users_page.dart';
 import '../pages/games_page.dart';
 import '../pages/payments_page.dart';
 import '../pages/settings_page.dart';
+import '../pages/packages_page.dart';
+import '../pages/promo_codes_page.dart';
 
 part 'app_router.gr.dart';
 
@@ -26,6 +28,8 @@ class AppRouter extends RootStackRouter {
             AutoRoute(page: GamesRoute.page),
             AutoRoute(page: PaymentsRoute.page),
             AutoRoute(page: SettingsRoute.page),
+            AutoRoute(page: PackagesRoute.page),
+            AutoRoute(page: PromoCodesRoute.page),
           ],
         ),
       ];
