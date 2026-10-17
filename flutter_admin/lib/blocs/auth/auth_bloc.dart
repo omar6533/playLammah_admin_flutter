@@ -20,10 +20,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       final user = _auth.currentUser;
-      if (user != null) {
-        final role = await _authService.getOrInitUserRole(user.uid, user.email ?? '');
+      final role = user == null ? null : await _authService.getUserRole(user.uid, user.email ?? '');
+      if (user != null && role != null) {
         emit(AuthAuthenticated(user, role));
       } else {
+        if (user != null) await _auth.signOut();
         emit(AuthUnauthenticated());
       }
     } catch (e) {
@@ -42,12 +43,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       final user = _auth.currentUser;
-      if (user != null) {
-        final role = await _authService.getOrInitUserRole(user.uid, user.email ?? '');
-        emit(AuthAuthenticated(user, role));
-      } else {
+      if (user == null) {
         emit(const AuthError('Authentication failed: User is null'));
+        return;
       }
+      final role = await _authService.getUserRole(user.uid, user.email ?? '');
+      if (role == null) {
+        await _auth.signOut();
+        emit(const AuthError('This account does not have access to the admin portal.'));
+        return;
+      }
+      emit(AuthAuthenticated(user, role));
     } on FirebaseAuthException catch (e) {
       emit(AuthError(e.message ?? 'Authentication failed'));
     } catch (e) {

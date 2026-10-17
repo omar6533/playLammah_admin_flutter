@@ -31,21 +31,31 @@ class AuthService {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
-  // Returns the role of the given uid from admin_portal_users.
-  // If no record exists (first-ever admin login), bootstraps a record with role='admin'.
-  Future<String> getOrInitUserRole(String uid, String email) async {
-    final doc = await _db.collection('admin_portal_users').doc(uid).get();
-    if (!doc.exists || doc.data()?['role'] == null) {
-      await _db.collection('admin_portal_users').doc(uid).set({
-        'uid': uid,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdBy': 'system',
-        'role': 'admin',
-      }, SetOptions(merge: true));
-      return 'admin';
+  static const allowedRoles = {'admin', 'cms_manager'};
+
+  // Returns the admin-portal role for [uid], or null if this account isn't an
+  // admin-portal user. Customer accounts share the same Firebase Auth project,
+  // so only uids listed in admin_portal_users may enter. The only exception is
+  // a brand-new setup with no admin records at all, where the first sign-in
+  // becomes the initial admin.
+  Future<String?> getUserRole(String uid, String email) async {
+    final users = _db.collection('admin_portal_users');
+    final doc = await users.doc(uid).get();
+    if (doc.exists) {
+      // Records created before roles existed have no role and were admins.
+      final role = (doc.data()?['role'] as String?) ?? 'admin';
+      return allowedRoles.contains(role) ? role : null;
     }
-    return (doc.data()!['role'] as String?) ?? 'admin';
+    final anyAdmin = await users.limit(1).get();
+    if (anyAdmin.docs.isNotEmpty) return null;
+    await users.doc(uid).set({
+      'uid': uid,
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': 'system',
+      'role': 'admin',
+    });
+    return 'admin';
   }
 
   // Creates a new admin portal user without touching the current admin session.
